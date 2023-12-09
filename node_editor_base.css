@@ -83,8 +83,8 @@ body {
 }
 
 .boardWrapper .inputNode {
-    width: 12px;
-    height: 12px;
+    width: 16px;
+    height: 16px;
     border-radius: 100%;
     background-color: #e83f6f;
     cursor: crosshair;
@@ -106,8 +106,8 @@ body {
 }
 
 .boardWrapper .outputNode {
-    width: 12px;
-    height: 12px;
+    width: 16px;
+    height: 16px;
     border-radius: 100%;
     background-color: #e83f6f;
     cursor: crosshair;
