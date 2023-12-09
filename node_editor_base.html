@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Node Flow Editor</title>
+    <link rel="stylesheet" href="bulma.min.css">
+    <link rel="stylesheet" href="node_editor_base.css">
+    <link rel="stylesheet" href="contextmenu.css">
+    <script src="node_editor_base.js"></script>
+    <script src="contextmenu.js"></script>
+</head>
+<body>
+    <!--
+        based on:
+        https://www.youtube.com/watch?v=1JNbGf8dhAQ
+    -->
+
+
+    <div id="boardWrapper" class="boardWrapper">
+        <div id="board" class="board">
+            <div class="dropdown is-active" id="dropdown-menu-node-wrapper">
+                <div>
+                <article class="message is-info dropdown-menu">
+                    <div class="message-header has-text-info-light">
+                      Add node
+                    </div>
+                <div class="dropdown-menu" id="dropdown-menu-node" role="menu">
+                  <div class="dropdown-content">
+                    <template class="dropdown-item-template">
+                        <a href="#" class="dropdown-item">
+                        </a>
+                    </template>
+                    <template class="dropdown-item-template-divider">
+                        <hr class="dropdown-divider">
+                    </template>
+                  </div>
+                </div>
+                </article>
+                </div>
+            </div>
+        </div>
+
+        <template class="nodeTemplateAdd">
+            <article class="node message is-info is-small">
+                <div class="message-header is-small">
+                  Add
+                  <button class="delete is-small"></button>
+                </div>
+                <div class="message-body">
+                  
+                </div>
+                <div class="inputsWrapper">
+                    <div class="inputNode"></div>
+                    <div class="inputNode"></div>
+                </div>
+                <div class="outputsWrapper">
+                    <div class="outputNode"></div>
+                </div>
+            </article>
+        </template>
+
+        <template class="nodeTemplateAverage">
+            <article class="node message is-info is-small">
+                <div class="message-header is-small">
+                  Average
+                  <button class="delete is-small"></button>
+                </div>
+                <div class="message-body">
+                  
+                </div>
+                <div class="inputsWrapper">
+                    <div class="inputNode"></div>
+                </div>
+                <div class="outputsWrapper">
+                    <div class="outputNode"></div>
+                </div>
+            </article>
+        </template>
+
+        <template class="nodeTemplateMath">
+            <article class="node message is-info is-small">
+                <div class="message-header is-small">
+                  Math
+                  <button class="delete is-small"></button>
+                </div>
+                <div class="message-body">
+                    <select class="input node-math-type">
+                        <option value="add">Add</option>
+                        <option value="subtract">Subtract</option>
+                        <option value="multiply">Multiply</option>
+                        <option value="divide">Divide</option>
+                    </select>
+                </div>
+                <div class="inputsWrapper">
+                    <div class="inputNode"></div>
+                    <div class="inputNode"></div>
+                </div>
+                <div class="outputsWrapper">
+                    <div class="outputNode"></div>
+                </div>
+            </article>
+        </template>
+
+        <template class="nodeTemplateNumber">
+            <article class="node message is-info is-small">
+                <div class="message-header is-small">
+                  Number
+                  <button class="delete is-small"></button>
+                </div>
+                <div class="message-body">
+                    <input class="input node-math-value" type="number" step="0.1" value="0">
+                </div>
+                <div class="inputsWrapper">
+                    <div class="inputNode"></div>
+                    <div class="inputNode"></div>
+                </div>
+                <div class="outputsWrapper">
+                    <div class="outputNode"></div>
+                </div>
+            </article>
+        </template>
+
+        <template class="nodeTemplateOutput">
+            <article class="node message is-primary is-small  has-background-success-light">
+                <div class="message-header is-small">
+                  Output
+                  <button class="delete is-small"></button>
+                </div>
+                <div class="message-body">
+                    
+                </div>
+                <div class="inputsWrapper">
+                    <div class="inputNode"></div>
+                </div>
+            </article>
+        </template>
+
+        <template class="edgeTemplate">
+            <svg class="edgeWrapper">
+                <path class="edgeNew"/>
+                <g class="deleteButton deleteHidden">
+                    <circle class="circle" />
+                    <svg
+                        fill="currentColor"
+                        stroke-width="0"
+                        width="30"
+                        height="30"
+                        viewBox="210 240 1000 1000"
+                        style="overflow: visible;"
+                        class="icon"
+                    >
+                        <path d="M135.2 17.7C140.6 6.8 151.7 0 163.8 0h120.4c12.1 0 23.2 6.8 28.6 17.7L320 32h96c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 96 0 81.7 0 64s14.3-32 32-32h96l7.2-14.3zM32 128h384v320c0 35.3-28.7 64-64 64H96c-35.3 0-64-28.7-64-64V128zm96 64c-8.8 0-16 7.2-16 16v224c0 8.8 7.2 16 16 16s16-7.2 16-16V208c0-8.8-7.2-16-16-16zm96 0c-8.8 0-16 7.2-16 16v224c0 8.8 7.2 16 16 16s16-7.2 16-16V208c0-8.8-7.2-16-16-16zm96 0c-8.8 0-16 7.2-16 16v224c0 8.8 7.2 16 16 16s16-7.2 16-16V208c0-8.8-7.2-16-16-16z"></path>
+                    </svg>
+                </g>
+            </svg>
+        </template>
+    </div>
+
+    <script type="text/javascript">
+        let n = new NodeFlowEditor(document.getElementById("board"), document.getElementById("boardWrapper"));
+        n.addNode(4, 100,200);
+        n.addNode(1, 350,100);
+        n.addNode(2, 600,100);
+        n.addNode(3, 350,400);
+    </script>
+
+</body>

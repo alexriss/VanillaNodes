@@ -1,0 +1,187 @@
+body {
+    margin: 0;
+}
+
+
+/* board  */
+
+.boardWrapper {
+    position: fixed;
+    width: 100vw;
+    height: 100vh;
+    top: 0px;
+    left: 0px;
+    overflow: scroll;
+}
+
+.board {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    background-size: 30px 30px;
+    background-image: radial-gradient(circle, #b8b8b8bf 1px, rgba(0, 0, 0, 0) 1px);
+    /* cursor: grab; */
+}
+
+.boardDragging {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    background-size: 30px 30px;
+    background-image: radial-gradient(circle, #b8b8b8bf 1px, rgba(0, 0, 0, 0) 1px);
+    cursor: grabbing;
+}
+
+
+/* node */
+
+.boardWrapper .node {
+    display: flex;
+    flex-direction: column;
+    position: absolute;
+    cursor: grab;
+    background-color: #ffffff;
+    border: 2px solid #c4c4c4;
+    border-radius: 6px;
+    box-shadow: 1px 1px 11px -6px rgba(0, 0, 0, 0.75);
+    user-select: none;
+    z-index: 1;
+    transition: border ease 0.2s, box-shadow ease 0.2s;
+    width: 120px;
+    min-height: 100px;
+    font-size: small;
+}
+
+.boardWrapper .message-header {
+    padding: .3em 0.5em;
+}
+
+.boardWrapper .node:hover {
+    box-shadow: 2px 2px 12px -6px rgba(0, 0, 0, 0.75);
+}
+
+.boardWrapper .nodeSelected {
+    border: 2px solid #e83f6f;
+}
+
+.boardWrapper .nodeSelected:hover {
+    box-shadow: 2px 2px 12px -6px rgba(0, 0, 0, 0.75);
+}
+
+.boardWrapper .inputsWrapper {
+    position: absolute;
+    top: 8px;
+    left: -7px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    width: 12px;
+    pointer-events: none;
+}
+
+.boardWrapper .inputNode {
+    width: 12px;
+    height: 12px;
+    border-radius: 100%;
+    background-color: #e83f6f;
+    cursor: crosshair;
+    pointer-events: all;
+}
+
+.boardWrapper .outputsWrapper {
+    position: absolute;
+    top: 8px;
+    right: -7px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    width: 12px;
+    pointer-events: none;
+}
+
+.boardWrapper .outputNode {
+    width: 12px;
+    height: 12px;
+    border-radius: 100%;
+    background-color: #e83f6f;
+    cursor: crosshair;
+    pointer-events: all;
+}
+
+.boardWrapper .node select, .boardWrapper .node input {
+    font-size: small;
+    border: 1px solid #c4c4c4;
+    height: auto;
+    line-height: normal;
+    padding: 0.3em 0.3em;
+    margin:0;
+}
+
+
+
+/* edge */
+
+.edgeWrapper {
+    position: absolute;
+    top: 0px;
+    left: 0px;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+
+.edgeWrapper .delete {
+    cursor: pointer;
+    pointer-events: all;
+    transition: all ease 0.1s;
+}
+
+.edgeWrapper .deleteHidden {
+    cursor: pointer;
+    pointer-events: none;
+    opacity: 0;
+    transition: all ease 0.1s;
+}
+
+.edgeWrapper .icon {
+    width: 26px;
+    height: 20px;
+    background-color: white;
+    fill: white;
+}
+
+.edgeWrapper .circle {
+    cx: 0;
+    cy: 0;
+    r: 14;
+    fill: rgb(175, 59, 59);
+}
+
+.edgeWrapper .edge {
+    pointer-events: all;
+    stroke: rgba(168, 168, 168, 0.8);
+    stroke-width: 2;
+    fill: transparent;
+    cursor: pointer;
+}
+
+.edgeWrapper .edgeSelected {
+    pointer-events: all;
+    stroke: rgb(216, 141, 62);
+    stroke-width: 3;
+    fill: transparent;
+    z-index: 100;
+}
+
+.edgeWrapper .edgeNew {
+    stroke: rgba(168, 168, 168, 0.4);
+    stroke-width: 2;
+    fill: transparent;
+}
+
