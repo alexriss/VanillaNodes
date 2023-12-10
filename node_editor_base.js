@@ -169,9 +169,9 @@ NodeFlowEditor.prototype = {
                 onMouseDownNode: (event) => this.handleOnMouseDownNode(id, event),
                 onMouseUpNode: (event) => this.handleOnMouseUpNode(id, event),
                 onClickDelete: (event) => this.handleOnClickDeleteId(id, event),
-                onMouseDownOutput: (x, y, id, ind) => this.handleOnMouseDownOutput(x, y, id, ind),
-                onMouseEnterInput: (x, y, id, ind) => this.handleOnMouseEnterInput(x, y, id, ind),
-                onMouseLeaveInput: (id, ind) => this.handleOnMouseLeaveInput(id, ind),
+                onMouseDownOutput: (x, y, id, indO, indI) => this.handleOnMouseDownOutput(x, y, id, indO, indI),
+                onMouseEnterInput: (x, y, id, indO, indI) => this.handleOnMouseEnterInput(x, y, id, indO, indI),
+                onMouseLeaveInput: (id, indO, indI) => this.handleOnMouseLeaveInput(id, indO, indI),
 
             }
         )
@@ -199,6 +199,7 @@ NodeFlowEditor.prototype = {
         this.boardElement.removeChild(this.newEdgeObj.edge);
         this.newEdge = null;
         this.newEdgeObj = null;
+        this.setActiveInputs(); // set all active
     },
 
     deleteEdge(edge)  {
@@ -229,6 +230,26 @@ NodeFlowEditor.prototype = {
         });
     },
 
+    setActiveInputs() {
+        // set the specific inputs as active when creating a new edge
+        if (this.newEdge === null) {
+            for (let i=0; i<this.nodes.length; i++) {
+                this.nodes[i].setActiveInputs(false, -1, true);
+            }
+        } else {
+            const nodeId = this.newEdge.nodeStartId;
+            const inverted = (this.newEdge.outputIndex == -1)
+            const ind = inverted ? this.newEdge.inputIndex : this.newEdge.outputIndex;
+            for (let i=0; i<this.nodes.length; i++) {
+                if (this.nodes[i].id == nodeId) {
+                    this.nodes[i].setActiveInputs(inverted, ind);
+                } else {
+                    this.nodes[i].setActiveInputs(inverted, -1);
+                }
+            }
+        }
+    },
+
     // Handlers
     handleOnMouseDownBoard(event) {
         // Deselect node
@@ -256,6 +277,13 @@ NodeFlowEditor.prototype = {
 
         // If a new edge is being set and is inside input
         if (this.newEdge !== null && this.insideInput !== null) {
+            if (this.newEdge.outputIndex == -1) {  // inverted edge
+                [this.newEdge.nodeStartId, this.insideInput.nodeId] = [this.insideInput.nodeId, this.newEdge.nodeStartId];
+                this.newEdge.inputIndex = this.newEdge.outputIndex;
+                this.newEdge.outputIndex = this.insideInput.inputIndex;
+                this.insideInput.inputIndex = this.newEdge.inputIndex;
+                [this.newEdge.currStartPosition, this.insideInput.position] = [this.insideInput.position, this.newEdge.currStartPosition];
+            }
             const nodeStartId = this.newEdge.nodeStartId;
             const nodeEndId = this.insideInput.nodeId;
 
@@ -280,13 +308,13 @@ NodeFlowEditor.prototype = {
                 };
 
                 this.newEdge.prevEndPosition = {
-                    x: (this.insideInput.positionX + this.boardWrapperElement.scrollLeft) / this.scale,
-                    y: (this.insideInput.positionY + this.boardWrapperElement.scrollTop) / this.scale,
+                    x: (this.insideInput.position.x + this.boardWrapperElement.scrollLeft) / this.scale,
+                    y: (this.insideInput.position.y + this.boardWrapperElement.scrollTop) / this.scale,
                 };
 
                 this.newEdge.currEndPosition = {
-                    x: (this.insideInput.positionX + this.boardWrapperElement.scrollLeft) / this.scale,
-                    y: (this.insideInput.positionY + this.boardWrapperElement.scrollTop) / this.scale,
+                    x: (this.insideInput.position.x + this.boardWrapperElement.scrollLeft) / this.scale,
+                    y: (this.insideInput.position.y + this.boardWrapperElement.scrollTop) / this.scale,
                 };
 
                 this.newEdge.position = {
@@ -491,7 +519,7 @@ NodeFlowEditor.prototype = {
         this.deleteNode(node);
     },
 
-    handleOnMouseDownOutput(outputPositionX, outputPositionY, nodeId, outputIndex) {
+    handleOnMouseDownOutput(outputPositionX, outputPositionY, nodeId, outputIndex, inputIndex) {
         // Deselect node
         this.setSelectedNode(null);
 
@@ -517,17 +545,29 @@ NodeFlowEditor.prototype = {
             id: "",
             nodeStartId: nodeId,
             outputIndex: outputIndex,
+            inputIndex: inputIndex,
             nodeEndId: "",
-            inputIndex: -1,
             prevStartPosition: prevEdgeStart,
             currStartPosition: currEdgeStart,
             prevEndPosition: prevEdgeEnd,
             currEndPosition: currEdgeEnd,
         });
+
+        this.setActiveInputs();
     },
 
-    handleOnMouseEnterInput(inputPositionX, inputPositionY, nodeId, inputIndex) {
-        this.insideInput = { nodeId, inputIndex, positionX: inputPositionX, positionY: inputPositionY };
+    handleOnMouseEnterInput(inputPositionX, inputPositionY, nodeId, outputIndex, inputIndex) {
+        // only connect input to output and output to input
+        if (this.newEdge === null) {
+            return;
+        }
+        if (this.newEdge.outputIndex >= 0 && inputIndex >= 0) {
+            this.insideInput = { nodeId: nodeId, inputIndex: inputIndex, position: {x : inputPositionX, y: inputPositionY}};
+        } else if (this.newEdge.inputIndex >=0 && outputIndex >= 0) {
+            this.insideInput = { nodeId: nodeId, inputIndex: outputIndex, position: {x : inputPositionX, y: inputPositionY}};
+        } else {
+            this.insideInput = null;
+        }
     },
 
     handleOnMouseLeaveInput(nodeId, inputIndex) {
@@ -628,14 +668,17 @@ NodeFlowEditorNode.prototype = {
         // Inputs
         const inputs = node.querySelectorAll(".inputNode");
         for (let i = 0; i < inputs.length; i++) {
-            inputs[i].addEventListener("mouseenter", (e) => this.handleMouseEnterInput(inputs[i], i));
+            inputs[i].addEventListener("mouseenter", (e) => this.handleMouseEnterInput(inputs[i], -1, i));
             inputs[i].addEventListener("mouseleave", (e) => this.handleMouseLeaveInput(i));
+            inputs[i].addEventListener("mousedown", (e) => this.handleMouseDownOutput(inputs[i], e, -1, i));
         }
 
         // Outputs
         const outputs = node.querySelectorAll(".outputNode");
         for (let i = 0; i < outputs.length; i++) {
-            outputs[i].addEventListener("mousedown", (e) => this.handleMouseDownOutput(outputs[i], e, i));
+            outputs[i].addEventListener("mouseenter", (e) => this.handleMouseEnterInput(outputs[i], i, -1));
+            outputs[i].addEventListener("mouseleave", (e) => this.handleMouseLeaveInput(i));
+            outputs[i].addEventListener("mousedown", (e) => this.handleMouseDownOutput(outputs[i], e, i, -1));
         }
 
         // Delete button
@@ -675,8 +718,42 @@ NodeFlowEditorNode.prototype = {
         this.node.style.zIndex = zindex;
     },
 
+    setActiveInputs(inverted=false, currOutputIndex=-1, allActive=false) {
+        let inputs = this.node.querySelectorAll(".inputNode");
+        let outputs = this.node.querySelectorAll(".outputNode");
+
+        if (allActive) {
+            console.log("all active");
+            for (let i = 0; i < inputs.length; i++) {
+                inputs[i].classList.remove("disabled");
+            }
+            for (let i = 0; i < outputs.length; i++) {
+                outputs[i].classList.remove("disabled");
+            }
+        } else {
+            if (inverted) {
+                [inputs, outputs] = [outputs, inputs];
+            }
+
+            for (let i = 0; i < inputs.length; i++) {
+                if (currOutputIndex == -1) {
+                    inputs[i].classList.remove("disabled");
+                } else {  // the inputs of the current node should be inactive
+                    inputs[i].classList.add("disabled");
+                }
+            }
+            for (let i = 0; i < outputs.length; i++) {
+                if (i == currOutputIndex) {
+                    outputs[i].classList.remove("disabled");
+                } else {
+                    outputs[i].classList.add("disabled");
+                }
+            }
+        }
+    },
+
     // handlers
-    handleMouseDownOutput(ref, event, outputIndex) {
+    handleMouseDownOutput(ref, event, outputIndex, inputIndex) {
         // Disable drag node
         event.stopPropagation();
 
@@ -685,16 +762,16 @@ NodeFlowEditorNode.prototype = {
         const centerY =
             ref.getBoundingClientRect().top + Math.abs(ref.getBoundingClientRect().bottom - ref.getBoundingClientRect().top) / 2;
 
-        this.onMouseDownOutput(centerX, centerY, this.id, outputIndex);
+        this.onMouseDownOutput(centerX, centerY, this.id, outputIndex, inputIndex);
     },
 
-    handleMouseEnterInput(ref, inputIndex) {
+    handleMouseEnterInput(ref, outputIndex, inputIndex) {
         const centerX =
             ref.getBoundingClientRect().left + Math.abs(ref.getBoundingClientRect().right - ref.getBoundingClientRect().left) / 2;
         const centerY =
             ref.getBoundingClientRect().top + Math.abs(ref.getBoundingClientRect().bottom - ref.getBoundingClientRect().top) / 2;
 
-        this.onMouseEnterInput(centerX, centerY, this.id, inputIndex);
+        this.onMouseEnterInput(centerX, centerY, this.id, outputIndex, inputIndex);
     },
 
     handleMouseLeaveInput(inputIndex) {
@@ -711,6 +788,9 @@ function NodeFlowEditorEdge(boardWrapper, board, props) {
     this.selected = false;
     this.isNew = false;
     this.position = { x0: 0, y0: 0, x1: 0, y1: 0 };
+
+    this.outputIndex = -1;
+    this.inputIndex = -1;
 
     // merge props
     Object.assign(this, props);
@@ -812,10 +892,15 @@ NodeFlowEditorEdge.prototype = {
     setPosition(position) {
         this.position = position;
 
+        let offset = this.calculateOffset(Math.abs(position.x1 - position.x0));
+        if (this.outputIndex == -1) {
+            offset = -offset;
+        }
+
         this.path.setAttribute("d", `
         M ${position.x0} ${position.y0} C ${
-            position.x0 + this.calculateOffset(Math.abs(position.x1 - position.x0))
-        } ${position.y0}, ${position.x1 - this.calculateOffset(Math.abs(position.x1 - position.x0))} ${
+            position.x0 + offset
+        } ${position.y0}, ${position.x1 - offset } ${
             position.y1
         }, ${position.x1} ${position.y1}`
         );

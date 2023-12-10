@@ -82,27 +82,6 @@ body {
     pointer-events: none;
 }
 
-.boardWrapper .inputNode {
-    width: 20px;
-    height: 20px;
-    cursor: crosshair;
-    pointer-events: all;
-}
-
-.boardWrapper .inputNode:before {
-    content: '';
-    display: inline-block;
-    width: 16px;
-    height: 16px;
-    border-radius: 50%;
-    margin: 2px;
-    background-color: #e83f6f;
-}
-
-.boardWrapper .inputNode:hover:before {
-    border: 2px solid #6c1f35;
-}
-
 .boardWrapper .outputsWrapper {
     position: absolute;
     top: 8px;
@@ -117,14 +96,14 @@ body {
     pointer-events: none;
 }
 
-.boardWrapper .outputNode {
+.boardWrapper .inputNode, .boardWrapper .outputNode {
     width: 20px;
     height: 20px;
     cursor: crosshair;
     pointer-events: all;
 }
 
-.boardWrapper .outputNode:before {
+.boardWrapper .inputNode:before, .boardWrapper .outputNode:before {
     content: '';
     display: inline-block;
     width: 16px;
@@ -134,8 +113,16 @@ body {
     background-color: #e83f6f;
 }
 
-.boardWrapper .outputNode:hover:before {
+.boardWrapper .inputNode.disabled:before, .boardWrapper .outputNode.disabled:before {
+    background-color: #f7b6c9;
+}
+
+.boardWrapper .outputNode:hover:before, .boardWrapper .inputNode:hover:before {
     border: 2px solid #6c1f35;
+}
+
+.boardWrapper .outputNode.disabled:hover:before, .boardWrapper .inputNode.disabled:hover:before {
+    border: none;
 }
 
 
