@@ -83,12 +83,24 @@ body {
 }
 
 .boardWrapper .inputNode {
-    width: 16px;
-    height: 16px;
-    border-radius: 100%;
-    background-color: #e83f6f;
+    width: 20px;
+    height: 20px;
     cursor: crosshair;
     pointer-events: all;
+}
+
+.boardWrapper .inputNode:before {
+    content: '';
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    margin: 2px;
+    background-color: #e83f6f;
+}
+
+.boardWrapper .inputNode:hover:before {
+    border: 2px solid #6c1f35;
 }
 
 .boardWrapper .outputsWrapper {
@@ -106,13 +118,26 @@ body {
 }
 
 .boardWrapper .outputNode {
-    width: 16px;
-    height: 16px;
-    border-radius: 100%;
-    background-color: #e83f6f;
+    width: 20px;
+    height: 20px;
     cursor: crosshair;
     pointer-events: all;
 }
+
+.boardWrapper .outputNode:before {
+    content: '';
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    margin: 2px;
+    background-color: #e83f6f;
+}
+
+.boardWrapper .outputNode:hover:before {
+    border: 2px solid #6c1f35;
+}
+
 
 .boardWrapper .node select, .boardWrapper .node input {
     font-size: small;
@@ -150,8 +175,8 @@ body {
 }
 
 .edgeWrapper .icon {
-    width: 26px;
-    height: 20px;
+    width: 16px;
+    height: 16px;
     background-color: white;
     fill: white;
 }
@@ -159,7 +184,7 @@ body {
 .edgeWrapper .circle {
     cx: 0;
     cy: 0;
-    r: 14;
+    r: 11;
     fill: rgb(175, 59, 59);
 }
 
