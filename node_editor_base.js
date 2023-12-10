@@ -433,7 +433,7 @@ NodeFlowEditor.prototype = {
     },
 
     handleOnMouseUpNode(id, event) {
-        if (!this.grabbingNode) {
+        if (!this.grabbingNode && this.newEdge === null) {
             const unselect = (event.ctrlKey || event.shiftKey) ? false : true;
             let switchState = (event.ctrlKey || event.shiftKey) ? true : false;
             switchState = this.clickedNodeInitialState ? switchState : false;
