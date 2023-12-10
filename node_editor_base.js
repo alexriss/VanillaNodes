@@ -9,6 +9,7 @@ function NodeFlowEditor(boardElement, boardWrapperElement) {
     this.clickedNodeInitialState = false;
 
     this.selectedEdge = null;
+    this.selectedEdgeTemp = null;
     this.newEdge = null;
     this.newEdgeObj = null;
 
@@ -76,6 +77,9 @@ function NodeFlowEditor(boardElement, boardWrapperElement) {
             }
             if (this.selectedEdge !== null) {
                 this.handleOnDeleteEdge(this.selectedEdge);
+            }
+            if (this.selectedEdgeTemp !== null) {
+                this.handleOnDeleteEdge(this.selectedEdgeTemp);
             }
         }
     });
@@ -202,6 +206,19 @@ NodeFlowEditor.prototype = {
         this.edges = [...this.edges.filter((e) => edge.id !== e.id)];
     },
 
+    updateEdges() {
+        for (let i = 0; i < this.edges.length; i++) {
+            if (this.edges[i].id == this.selectedEdge) {
+                this.edges[i].selected = true;
+            } else if (this.edges[i].id == this.selectedEdgeTemp) {
+                this.edges[i].selected = true;
+            } else {
+                this.edges[i].selected = false;
+            }
+            this.edges[i].setStyle();
+        }   
+    },
+
     setNewEdgeCurrEndPosition(position) {
         this.newEdgecurrEndPosition = position;
         this.newEdgeObj.setPosition({
@@ -219,6 +236,7 @@ NodeFlowEditor.prototype = {
 
         // Deselect edge
         this.selectedEdge = null;
+        this.updateEdges();
 
         // Start grabbing board
         this.setGrabbingBoard(true);
@@ -286,6 +304,8 @@ NodeFlowEditor.prototype = {
                     nodeEndId: nodeEnd.id,
                     nodeEndInputIndex: this.insideInput.inputIndex,
                     onMouseDownEdge: () => this.handleOnMouseDownEdge(edgeId),
+                    onMouseOverEdge: () => this.handleOnMouseOverEdge(edgeId),
+                    onMouseLeaveEdge: () => this.handleOnMouseLeaveEdge(edgeId),
                     onClickDelete: () => this.handleOnDeleteEdge(edgeId) 
                 })
 
@@ -362,6 +382,7 @@ NodeFlowEditor.prototype = {
 
         // Deselect edge
         this.selectedEdge = null;
+        this.updateEdges();
 
         // Update first click position
         this.clickedPosition = { x: event.x, y: event.y };
@@ -521,6 +542,20 @@ NodeFlowEditor.prototype = {
 
         // Select edge
         this.selectedEdge = edgeId;
+        this.updateEdges();
+    },
+
+    handleOnMouseOverEdge(edgeId) {
+        // Select edge
+        if (this.newEdge === null) {
+            this.selectedEdgeTemp = edgeId;
+            this.updateEdges();
+        }
+    },
+
+    handleOnMouseLeaveEdge(edgeId) {
+        this.selectedEdgeTemp = null;
+        this.updateEdges();
     },
 
     handleOnDeleteEdge(edgeId) {
@@ -530,17 +565,18 @@ NodeFlowEditor.prototype = {
             // Delete edge from start node
             const nodeStart = this.nodes.find((n) => n.id === edge.nodeStartId);
             if (nodeStart) {
-                nodeStart.outputEdgeIds.set([...nodeStart.outputEdgeIds.get().filter((edgeId) => edgeId !== edge.id)]);
+                nodeStart.outputEdgeIds = [...nodeStart.outputEdgeIds.filter((edgeId) => edgeId !== edge.id)];
             }
 
             // Delete edge from end node
             const nodeEnd = this.nodes.find((n) => n.id === edge.nodeEndId);
             if (nodeEnd) {
-                nodeEnd.inputEdgeIds.set([...nodeEnd.inputEdgeIds.get().filter((edgeId) => edgeId !== edge.id)]);
+                nodeEnd.inputEdgeIds = [...nodeEnd.inputEdgeIds.filter((edgeId) => edgeId !== edge.id)];
             }
 
             // Delete edge from global edges array
             this.edges = [...this.edges.filter((e) => e.id !== edge.id)];
+            this.deleteEdge(edge);
         }
     },
 
@@ -695,28 +731,20 @@ NodeFlowEditorEdge.prototype = {
         this.deleteButton = edge.querySelector(".deleteButton");
         
         this.deleteButton.addEventListener("click", (e) => this.handleOnClickDelete(e));
+        this.path.addEventListener("mousedown", (e) => this.handleOnMouseDownEdge(e));
+        this.edge.addEventListener("mouseover", (e) => this.handleOnMouseOverEdge(e));
+        this.edge.addEventListener("mouseleave", (e) => this.handleOnMouseLeaveEdge(e));
 
         this.setPosition(this.position);
         this.setSelectedNew(this.selected, this.isNew);
 
-        const style = this.isNew ? "edgeNew" : this.selected ? "edgeSelected" : "edge";
-        this.path.classList.remove("edge");
-        this.path.classList.remove("edgeNew");
-        this.path.classList.remove("edgeSelected");
-        this.path.classList.add(style);
+        this.setStyle();
         // Add edge to board
         this.board.appendChild(edge);
     },
 
     // Setters
-    setMiddlePoint(x, y) {
-        this.middlePoint = { x: x, y: y };
-        this.deleteButton.style.transform = `translate(${x}px, ${y}px)`;
-    },
-
-    setSelectedNew(selected, isNew) {
-        this.selected = selected;
-        this.isNew = isNew;
+    setStyle() {
         if (this.isNew) {
             this.path.classList.add("edgeNew");
             this.path.classList.remove("edge");
@@ -725,11 +753,32 @@ NodeFlowEditorEdge.prototype = {
             this.path.classList.add("edgeSelected");
             this.path.classList.remove("edge");
             this.path.classList.remove("edgeNew");
+            this.deleteButton.classList.add("delete");
+            this.deleteButton.classList.remove("deleteHidden");
         } else {
             this.path.classList.add("edge");
             this.path.classList.remove("edgeSelected");
             this.path.classList.remove("edgeNew");
+            this.deleteButton.classList.add("deleteHidden");
+            this.deleteButton.classList.remove("delete");
         }
+    },
+
+    setMiddlePoint() {
+        let x = this.position.x0 + (this.position.x1 - this.position.x0) / 2;
+        let y = this.position.y0 + (this.position.y1 - this.position.y0) / 2;
+
+        this.middlePoint = { x: x, y: y };
+        if (this.selected) {
+            y -= 24;
+        }
+        this.deleteButton.setAttribute('transform', `translate(${x} ${y})`);
+    },
+
+    setSelectedNew(selected, isNew) {
+        this.selected = selected;
+        this.isNew = isNew;
+        this.setStyle();
     },
 
     setCurrEndPosition(position) {
@@ -771,9 +820,7 @@ NodeFlowEditorEdge.prototype = {
         }, ${position.x1} ${position.y1}`
         );
 
-        const middleX = position.x0 + (position.x1 - position.x0) / 2;
-        const middleY = position.y0 + (position.y1 - position.y0) / 2;
-        this.setMiddlePoint({x: middleX, y: middleY});
+        this.setMiddlePoint();
     },
 
     // Give the edge a little offset so it curves
@@ -786,6 +833,14 @@ NodeFlowEditorEdge.prototype = {
         // Disable click on board event
         event.stopPropagation();
         this.onMouseDownEdge();
+    },
+
+    handleOnMouseOverEdge(event) {
+        this.onMouseOverEdge();
+    },
+
+    handleOnMouseLeaveEdge(event) {
+        this.onMouseLeaveEdge();
     },
 
     handleOnClickDelete(event) {
