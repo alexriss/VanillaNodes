@@ -24,30 +24,30 @@ function NodeFlowEditor(boardElement, boardWrapperElement) {
 
     this.maxZindex = 1;
 
-    this.nodeTypes = [
-        {
-            name: "Output",
-            template: "nodeTemplateOutput",
-            context: false,
-            permanent: true,
-        },
-        {
-            name: "Add",
-            template: "nodeTemplateAdd",
-        },
-        {
-            name: "Average",
-            template: "nodeTemplateAverage",
-        },
-        {
-            name: "Math",
-            template: "nodeTemplateMath",
-        },
-        {
-            name: "Number",
-            template: "nodeTemplateNumber",
-        },
-    ];
+    this.nodeTypes = {
+        Output: {
+                name: "Output",
+                template: "nodeTemplateOutput",
+                context: false,
+                permanent: true,
+            },
+        "Add": {
+                name: "Add",
+                template: "nodeTemplateAdd",
+            },
+        "Average": {
+                name: "Average",
+                template: "nodeTemplateAverage",
+            },
+        "Math": {
+                name: "Math",
+                template: "nodeTemplateMath",
+            },
+        "Number": {
+                name: "Number",
+                template: "nodeTemplateNumber",
+            },
+    };
 
     boardElement.addEventListener(
         "wheel",
@@ -85,18 +85,19 @@ function NodeFlowEditor(boardElement, boardWrapperElement) {
     });
 
     this.setupMenu();
-    this.addNode(0, 600, 600);
+    this.addNode({type: "Output"}, 600, 600);
 }
 
 
 NodeFlowEditor.prototype = {
     setupMenu() {
         const structure = [];
-        for (let i = 0; i < this.nodeTypes.length; i++) {
+        // iterate over nodetypes object key/value pairs
+        for (let [key, value] of Object.entries(this.nodeTypes)) {
             const obj = {
-                'onclick': (e) => this.handleOnClickAdd(e, i),
+                'onclick': (e) => this.handleOnClickAdd(e, key),
             }
-            Object.assign(obj, this.nodeTypes[i]);
+            Object.assign(obj, this.nodeTypes[key]);
             structure.push(obj);
         }
         structure.push('divider');      
@@ -155,28 +156,103 @@ NodeFlowEditor.prototype = {
         return node;
     },
 
-    addNode(nodeTypeIndex, x, y) {
-        const id = `node_${Math.random().toString(36).substring(2, 8)}`;
-        const newNode = new NodeFlowEditorNode(
+    addNode(node, x=-1, y=-1) {
+        if (x != -1 && y != -1) {
+            node.prevPosition = { x: x, y: y };
+            node.currPosition = { x: x, y: y };
+        }
+
+        if (!node.hasOwnProperty("id")) {
+            const id = `node_${Math.random().toString(36).substring(2, 8)}`;
+            node.id = id;
+        }
+
+        const nodeObj = new NodeFlowEditorNode(
             this.boardElement, this.boardWrapperElement,
-            this.nodeTypes[nodeTypeIndex],
+            this.nodeTypes[node.type],
             {
-                id: id,
-                prevPosition: { x: x, y: y },
-                currPosition: { x: x, y: y },
+                ...node,
                 inputEdgeIds: [],
                 outputEdgeIds: [],
-                onMouseDownNode: (event) => this.handleOnMouseDownNode(id, event),
-                onMouseUpNode: (event) => this.handleOnMouseUpNode(id, event),
-                onClickDelete: (event) => this.handleOnClickDeleteId(id, event),
-                onMouseDownOutput: (x, y, id, indO, indI) => this.handleOnMouseDownOutput(x, y, id, indO, indI),
-                onMouseEnterInput: (x, y, id, indO, indI) => this.handleOnMouseEnterInput(x, y, id, indO, indI),
-                onMouseLeaveInput: (id, indO, indI) => this.handleOnMouseLeaveInput(id, indO, indI),
-
+                onMouseDownNode: (event) => this.handleOnMouseDownNode(node.id, event),
+                onMouseUpNode: (event) => this.handleOnMouseUpNode(node.id, event),
+                onClickDelete: (event) => this.handleOnClickDeleteId(node.id, event),
+                onMouseDownOutput: (x, y, id, indO, indI) => this.handleOnMouseDownOutput(x, y, node.id, indO, indI),
+                onMouseEnterInput: (x, y, id, indO, indI) => this.handleOnMouseEnterInput(x, y, node.id, indO, indI),
+                onMouseLeaveInput: (id, indO, indI) => this.handleOnMouseLeaveInput(node.id, indO, indI),
             }
         )
         // Update global nodes array
-        this.nodes.push(newNode);
+        this.nodes.push(nodeObj);
+    },
+
+    addEdge(edge, cleanup=true) {
+        // adds egde from loaded objects
+        edge.id = `edge_${edge.nodeStartId}_${edge.nodeStartIndex}_${edge.nodeEndId}_${edge.nodeEndIndex}`;
+        if (!edge.hasOwnProperty("position") || !edge.hasOwnProperty("currStartPosition") || !edge.hasOwnProperty("currEndPosition")) {
+            const refOutput = this.nodes.find((node) => node.id === edge.nodeStartId).node.querySelectorAll(".outputNode")[edge.nodeStartIndex];
+            const refInput = this.nodes.find((node) => node.id === edge.nodeEndId).node.querySelectorAll(".inputNode")[edge.nodeEndIndex];
+
+            if (refOutput === undefined || refInput === undefined) {
+                return;
+            }
+
+            const outputPositionX = refOutput.getBoundingClientRect().left + Math.abs(refOutput.getBoundingClientRect().right - refOutput.getBoundingClientRect().left) / 2;
+            const outputPositionY = refOutput.getBoundingClientRect().top + Math.abs(refOutput.getBoundingClientRect().bottom - refOutput.getBoundingClientRect().top) / 2;
+            const inputPositionX = refInput.getBoundingClientRect().left + Math.abs(refInput.getBoundingClientRect().right - refInput.getBoundingClientRect().left) / 2;
+            const inputPositionY = refInput.getBoundingClientRect().top + Math.abs(refInput.getBoundingClientRect().bottom - refInput.getBoundingClientRect().top) / 2;
+
+            edge.currStartPosition = {
+                x: (outputPositionX + this.boardWrapperElement.scrollLeft) / this.scale,
+                y: (outputPositionY + this.boardWrapperElement.scrollTop) / this.scale,
+            };
+            edge.currEndPosition = {
+                x: (inputPositionX + this.boardWrapperElement.scrollLeft) / this.scale,
+                y: (inputPositionY + this.boardWrapperElement.scrollTop) / this.scale,
+            };
+
+            edge.position = {
+                x0: edge.currStartPosition.x,
+                y0: edge.currStartPosition.y,
+                x1: edge.currEndPosition.x,
+                y1: edge.currEndPosition.y,
+            };
+        }
+
+        // delete some leftover properties
+        if (cleanup) {
+            ["outputIndex", "inputIndex"].map((prop) => {
+                if (edge.hasOwnProperty(prop)) {
+                    delete edge[prop];
+                }
+            });
+        }
+
+        const nodeStart = this.nodes.find((node) => node.id === edge.nodeStartId);
+        const nodeEnd = this.nodes.find((node) => node.id === edge.nodeEndId);
+
+        // dont add edge if the nodes dont exist
+        if (nodeStart === undefined || nodeEnd === undefined) {
+            return;
+        }
+
+        // dont add the same edge twice
+        if (nodeStart.outputEdgeIds.includes(edge.id) && nodeEnd.inputEdgeIds.includes(edge.id)) {
+            return;
+        }
+
+        nodeStart.outputEdgeIds = [...nodeStart.outputEdgeIds, edge.id];
+        nodeEnd.inputEdgeIds = [...nodeEnd.inputEdgeIds, edge.id];
+
+        edge = {
+            ...edge,
+            onMouseDownEdge: () => this.handleOnMouseDownEdge(edge.id),
+            onMouseOverEdge: () => this.handleOnMouseOverEdge(edge.id),
+            onMouseLeaveEdge: () => this.handleOnMouseLeaveEdge(edge.id),
+            onClickDelete: () => this.handleOnDeleteEdge(edge.id)
+        }
+        const edgeObj = new NodeFlowEditorEdge(this.boardWrapperElement, this.boardElement, edge);
+        this.edges.push(edgeObj);
     },
 
     setNewEdge(edge) {
@@ -196,7 +272,9 @@ NodeFlowEditor.prototype = {
     },
 
     removeNewEdge() {
-        this.boardElement.removeChild(this.newEdgeObj.edge);
+        if (this.addEdgeObj !== null) {
+            this.boardElement.removeChild(this.newEdgeObj.edge);
+        }
         this.newEdge = null;
         this.newEdgeObj = null;
         this.setActiveInputs(); // set all active
@@ -277,69 +355,26 @@ NodeFlowEditor.prototype = {
 
         // If a new edge is being set and is inside input
         if (this.newEdge !== null && this.insideInput !== null) {
+            let startId = this.newEdge.nodeStartId;
+            let endId = this.insideInput.nodeId;
+            let startIndex = this.newEdge.outputIndex;
+            let endIndex = this.insideInput.inputIndex;
             if (this.newEdge.outputIndex == -1) {  // inverted edge
-                [this.newEdge.nodeStartId, this.insideInput.nodeId] = [this.insideInput.nodeId, this.newEdge.nodeStartId];
-                this.newEdge.inputIndex = this.newEdge.outputIndex;
-                this.newEdge.outputIndex = this.insideInput.inputIndex;
-                this.insideInput.inputIndex = this.newEdge.inputIndex;
-                [this.newEdge.currStartPosition, this.insideInput.position] = [this.insideInput.position, this.newEdge.currStartPosition];
+                [startId, endId] = [endId, startId];
+                startIndex = this.insideInput.inputIndex;
+                endIndex = this.newEdge.inputIndex;
             }
-            const nodeStartId = this.newEdge.nodeStartId;
-            const nodeEndId = this.insideInput.nodeId;
 
-            const nodeStart = this.nodes.find((node) => node.id === nodeStartId);
-            const nodeEnd = this.nodes.find((node) => node.id === nodeEndId);
-
-            if (nodeStart && nodeEnd && this.boardWrapperElement) {
-                const edgeId = `edge_${nodeStart.id}_${this.newEdge.outputIndex}_${nodeEnd.id}_${this.insideInput.inputIndex}`;
-
-                if (nodeStart.outputEdgeIds.includes(edgeId) && nodeEnd.inputEdgeIds.includes(edgeId)) {
-                    this.removeNewEdge();
-                    return;
-                }
-
-                nodeStart.outputEdgeIds = [...nodeStart.outputEdgeIds, edgeId];
-                nodeEnd.inputEdgeIds = [...nodeEnd.inputEdgeIds, edgeId];
-
-                // Update edge current positions
-                this.newEdge.prevStartPosition = {
-                    x: (this.newEdge.currStartPosition.x + this.boardWrapperElement.scrollLeft) / this.scale,
-                    y: (this.newEdge.currStartPosition.y + this.boardWrapperElement.scrollTop) / this.scale,
-                };
-
-                this.newEdge.prevEndPosition = {
-                    x: (this.insideInput.position.x + this.boardWrapperElement.scrollLeft) / this.scale,
-                    y: (this.insideInput.position.y + this.boardWrapperElement.scrollTop) / this.scale,
-                };
-
-                this.newEdge.currEndPosition = {
-                    x: (this.insideInput.position.x + this.boardWrapperElement.scrollLeft) / this.scale,
-                    y: (this.insideInput.position.y + this.boardWrapperElement.scrollTop) / this.scale,
-                };
-
-                this.newEdge.position = {
-                    x0: this.newEdge.currStartPosition.x,
-                    y0: this.newEdge.currStartPosition.y,
-                    x1: this.newEdge.currEndPosition.x,
-                    y1: this.newEdge.currEndPosition.y,
-                };
-
-                // Add new edge
-                const newEdge = new NodeFlowEditorEdge(this.boardWrapperElement, this.boardElement,
-                {
-                    ...this.newEdge,
-                    id: edgeId,
-                    nodeEndId: nodeEnd.id,
-                    nodeEndInputIndex: this.insideInput.inputIndex,
-                    onMouseDownEdge: () => this.handleOnMouseDownEdge(edgeId),
-                    onMouseOverEdge: () => this.handleOnMouseOverEdge(edgeId),
-                    onMouseLeaveEdge: () => this.handleOnMouseLeaveEdge(edgeId),
-                    onClickDelete: () => this.handleOnDeleteEdge(edgeId) 
-                })
-
-                this.edges.push(newEdge);
-                this.removeNewEdge();
+            // Add new edge
+            edge = {
+                nodeStartId: startId,
+                nodeEndId: endId,
+                nodeStartIndex: startIndex,
+                nodeEndIndex: endIndex,
             }
+
+            this.addEdge(edge);
+            this.removeNewEdge();
         }
     },
 
@@ -470,12 +505,12 @@ NodeFlowEditor.prototype = {
         this.grabbingNode = false;
     },
 
-    handleOnClickAdd(event, nodeTypeIndex) {
+    handleOnClickAdd(event, type) {
         // Positions taking into account scale and scroll
         const x = (event.x + this.boardWrapperElement.scrollLeft) / this.scale;
         const y = (event.y + this.boardWrapperElement.scrollTop) / this.scale;
 
-        this.addNode(nodeTypeIndex, x, y);
+        this.addNode({type: type}, x, y);
     },
 
     handleOnClickDeleteId(id, event) {
@@ -627,16 +662,62 @@ NodeFlowEditor.prototype = {
 
         // Delete node from board
         this.boardElement.removeChild(node.node);
+    },
+
+    exportData() {
+        // export all the node and edge data
+        const nodes = this.nodes.map((node) => {
+            return {
+                id: node.id,
+                type: node.type,
+                currPosition: node.currPosition,
+                inputEdgeIds: node.inputEdgeIds,
+                outputEdgeIds: node.outputEdgeIds,
+            };
+        });
+        const edges = this.edges.map((edge) => {
+            return {
+                id: edge.id,
+                nodeStartId: edge.nodeStartId,
+                nodeEndId: edge.nodeEndId,
+                nodeStartIndex: edge.nodeStartIndex,
+                nodeEndIndex: edge.nodeEndIndex,
+            };
+        });
+        return {nodes, edges};
+    },
+
+    loadData(data, clear=true) {
+        // clear board
+        if (clear) {
+            while (this.nodes.length > 0) {
+                this.deleteNode(this.nodes[0]);
+            }
+            while (this.edges.length > 0) {
+                this.deleteEdge(this.edges[0]);
+            }
+        }
+        // load from exported data
+        if (data.hasOwnProperty("nodes")) {
+            const nodes = data.nodes.map((node) => {
+                return this.addNode(node);
+            });
+        }
+        if (data.hasOwnProperty("edges")) {
+            const edges = data.edges.map((edge) => {
+                return this.addEdge(edge);
+            });
+        }
     }
 }
 
-function NodeFlowEditorNode(boardElement, boardWrapper, type, props) {
+function NodeFlowEditorNode(boardElement, boardWrapper, nodeType, props) {
     this.boardElement = boardElement;
     this.boardWrapper = boardWrapper;
     this.node = null;
-    this.type = type;
 
     this.id = "";
+    this.nodeType = nodeType;
     this.prevPosition = { x: 0, y: 0 };
     this.currPosition = { x: 0, y: 0 };
     this.numberInputs = 0;
@@ -656,7 +737,7 @@ function NodeFlowEditorNode(boardElement, boardWrapper, type, props) {
 
 NodeFlowEditorNode.prototype = {
     setup() {
-        const tpl = this.boardWrapper.getElementsByClassName(this.type.template)[0];
+        const tpl = this.boardWrapper.getElementsByClassName(this.nodeType.template)[0];
         const node = tpl.content.cloneNode(true);
 
         this.node = node.firstElementChild;
@@ -683,7 +764,7 @@ NodeFlowEditorNode.prototype = {
 
         // Delete button
         const deleteButton = node.querySelector(".delete");
-        if (this.type.hasOwnProperty("permanent") && this.type.permanent) {
+        if (this.nodeType.hasOwnProperty("permanent") && this.nodeType.permanent) {
             deleteButton.style.display = "none";
         } else {
             deleteButton.addEventListener("click", (e) => this.onClickDelete(e));
@@ -723,7 +804,6 @@ NodeFlowEditorNode.prototype = {
         let outputs = this.node.querySelectorAll(".outputNode");
 
         if (allActive) {
-            console.log("all active");
             for (let i = 0; i < inputs.length; i++) {
                 inputs[i].classList.remove("disabled");
             }
@@ -893,7 +973,7 @@ NodeFlowEditorEdge.prototype = {
         this.position = position;
 
         let offset = this.calculateOffset(Math.abs(position.x1 - position.x0));
-        if (this.outputIndex == -1) {
+        if (this.isNew && this.outputIndex == -1) {
             offset = -offset;
         }
 

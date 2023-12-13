@@ -160,10 +160,20 @@
 
     <script type="text/javascript">
         let n = new NodeFlowEditor(document.getElementById("board"), document.getElementById("boardWrapper"));
-        n.addNode(4, 100,200);
-        n.addNode(1, 350,100);
-        n.addNode(2, 600,100);
-        n.addNode(3, 350,400);
+        n.addNode({type: "Math"}, 100,200);
+        n.addNode({type: "Add"}, 350,100);
+        n.addNode({type: "Number"}, 600,100);
+        n.addNode({type: "Average"}, 350,400);
+
+        document.addEventListener('keydown', function(event) {
+            console.log(0);
+            if(event.shiftKey && event.key == 'E') {
+                window.nodeData = n.exportData();
+            }
+            if(event.shiftKey && event.key == 'I') {
+                n.loadData(window.nodeData);
+            }
+        });
     </script>
 
 </body>
