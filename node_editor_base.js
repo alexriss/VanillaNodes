@@ -330,6 +330,8 @@ NodeFlowEditor.prototype = {
 
     // Handlers
     handleOnMouseDownBoard(event) {
+        this.contextMenu.hideMenu();
+
         // Deselect node
         this.setSelectedNode(null);
 
@@ -442,6 +444,8 @@ NodeFlowEditor.prototype = {
     handleOnMouseDownNode(id, event) {
         // Prevent click on board
         event.stopPropagation();
+        
+        this.contextMenu.hideMenu();
 
         // Deselect edge
         this.selectedEdge = null;
@@ -555,6 +559,8 @@ NodeFlowEditor.prototype = {
     },
 
     handleOnMouseDownOutput(outputPositionX, outputPositionY, nodeId, outputIndex, inputIndex) {
+        this.contextMenu.hideMenu();
+        
         // Deselect node
         this.setSelectedNode(null);
 
@@ -612,6 +618,8 @@ NodeFlowEditor.prototype = {
     },
 
     handleOnMouseDownEdge(edgeId) {
+        this.contextMenu.hideMenu();
+        
         // Deselect node
         this.setSelectedNode(null);
 
