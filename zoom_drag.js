@@ -1,75 +1,78 @@
 // for imagezoom
 
-function ZoomDrag(divMain) {
+function ZoomDrag(divMain, subElementSelector) {
     const that = this;
     
     // config
-    let scale = 1;  // initial scale
-    let factor = 0.2;
-    let max_scale = 3;
-    let min_scale = 0.2;
-
-    this.scale = scale;  // need a global variable here
+    this.scale = 1;  // initial scale
+    this.factor = 0.1;
+    this.maxScale = 3;
+    this.minScale = 0.2;
+    
     this.divMain = divMain;
-    this.divMain.scrollTop = 0;
-    this.divMain.scrollLeft = 0;    
+
+    this.setZoom(this.scale);
+    this.setScroll({x: 0, y: 0}); 
 
     this.moveEnabled = false;  // set from outside
 
-    // drag the section
-    for (const divSection of divMain.getElementsByTagName('section')) {
-        // when mouse is pressed store the current mouse x,y
-        let previousX, previousY;
-        divSection.addEventListener('mousedown', (e) => {
-            previousX = e.pageX;
-            previousY = e.pageY;
-        })
+    this.subElementSelector = subElementSelector;  
 
-        // when mouse is moved, scrollBy() the mouse movement x,y
-        divSection.addEventListener('mousemove', (e) => {
-            // only do this when the primary mouse button is pressed (e.buttons = 1)
-            if (e.buttons) {
-                let dragX = 0;
-                let dragY = 0;
-                // skip the drag when the x position was not changed
-                if (e.pageX - previousX !== 0) {
-                    dragX = previousX - e.pageX;
-                    previousX = e.pageX;
-                }
-                // skip the drag when the y position was not changed
-                if (e.pageY - previousY !== 0) {
-                    dragY = previousY - e.pageY;
-                    previousY = e.pageY;
-                }
 
-                if (!that.getMoveEnabled(e)) {
-                    return;
-                }
+    // dragging
 
-                // scrollBy x and y
-                if (dragX !== 0 || dragY !== 0) {
-                    divMain.scrollBy(dragX, dragY);
-                }       
+    // when mouse is pressed store the current mouse x,y
+    let previousX, previousY;
+    divMain.addEventListener('mousedown', (e) => {
+        previousX = e.pageX;
+        previousY = e.pageY;
+    })
+
+    // when mouse is moved, scrollBy() the mouse movement x,y
+    divMain.addEventListener('mousemove', (e) => {
+        // only do this when the primary mouse button is pressed (e.buttons = 1)
+        if (e.buttons) {
+            let dragX = 0;
+            let dragY = 0;
+            // skip the drag when the x position was not changed
+            if (e.pageX - previousX !== 0) {
+                dragX = previousX - e.pageX;
+                previousX = e.pageX;
             }
-        })
-    }
+            // skip the drag when the y position was not changed
+            if (e.pageY - previousY !== 0) {
+                dragY = previousY - e.pageY;
+                previousY = e.pageY;
+            }
+
+            if (!that.getMoveEnabled(e)) {
+                return;
+            }
+
+            // scrollBy x and y
+            if (dragX !== 0 || dragY !== 0) {
+                divMain.scrollBy(dragX, dragY);
+            }       
+        }
+
+    });
 
     // zoom in/out on the section
     divMain.addEventListener('wheel', (e) => {
-        // preventDefault to stop the onselectionstart event logic
+        e.preventDefault();
+
+        let delta = e.delta || e.wheelDelta;
+        if (delta === undefined) {
+            //we are on firefox
+            delta = e.originale.detail;
+        };
+        delta = Math.max(-1, Math.min(1, delta)); // cap the delta to [-1,1] for cross browser consistency
+
+        // calculate new zoom
+        let scale = that.scale + delta * that.factor * that.scale;
+        scale = Math.max(that.minScale, Math.min(that.maxScale, scale));
+  
         for (const divSection of divMain.getElementsByTagName('section')) {
-            e.preventDefault();
-            let delta = e.delta || e.wheelDelta;
-            if (delta === undefined) {
-                //we are on firefox
-                delta = e.originale.detail;
-            };
-            delta = Math.max(-1, Math.min(1, delta)); // cap the delta to [-1,1] for cross browser consistency
-
-            // change zoom
-            let scale = that.scale + delta * factor * that.scale;
-            scale = Math.max(min_scale, Math.min(max_scale, scale));
-
             const displayWidth = divSection.clientWidth * scale;
             const displayHeight = divSection.clientHeight * scale;
             if (divMain.clientHeight > displayHeight) {
@@ -80,41 +83,92 @@ function ZoomDrag(divMain) {
                 divMain.scrollLeft = 0;
                 return;
             }
-
-            const newScroll = this.getScroll(divMain, e, that.scale, scale);
-            that.scale = scale;
-            divSection.style.transform = `scale(${that.scale}, ${that.scale})`;
-            divMain.scrollTop = newScroll.y;
-            divMain.scrollLeft = newScroll.x;
         }
-    })
+        const newScroll = that.getNewScrollEvent(e, that.scale, scale);
+        that.setZoom(scale);
+        that.setScroll(newScroll);
+    });
 
     // reset on doubleclick
     divMain.addEventListener('dblclick', (e) => {
-        if (!e.ctrlKey) {
-            this.zoom_drag_reset(e, divMain);
+        if (e.ctrlKey || e.metaKey || e.altKey || e.shiftKey) {
+            this.resetZoom(e);
+        } else {
+            this.adjustView();
         }
-    })
+    });
 }
 
 ZoomDrag.prototype = {
-    zoom_drag_reset(e, divMain) {
-        const newScroll = this.getScroll(divMain, e, this.scale, 1);
-        this.scale = 1;
-        for (const divSection of divMain.getElementsByTagName('section')) {
-            divSection.style.transform = "scale(1, 1)";
-        }
-        
-        divMain.scrollTop = newScroll.y;
-        divMain.scrollLeft = newScroll.x;
+    resetZoom(e) {
+        const newScroll = this.getNewScrollEvent(e, this.scale, 1);
+        this.setZoom(1);
+        this.setScroll(newScroll);
     },
 
-    getScroll(divMain, e, scaleOld, scaleNew) {
-        const offset = { x: divMain.scrollLeft, y: divMain.scrollTop };
-        const rect = divMain.getBoundingClientRect();
+    adjustView() {
+        // adjust zoom and scroll so that all elements are visible
+        let scale = 1;
+        let minX = Infinity;
+        let minY = Infinity;
+        let maxX = -Infinity;
+        let maxY = -Infinity;
+        for (const divSection of this.divMain.getElementsByTagName('section')) {
+            for (const divElement of divSection.querySelectorAll(this.subElementSelector)) {
+                const rect = divElement.getBoundingClientRect();
+                minX = Math.min(minX, rect.left);
+                minY = Math.min(minY, rect.top);
+                maxX = Math.max(maxX, rect.right);
+                maxY = Math.max(maxY, rect.bottom);
+            }
+            const NodesWidth = (maxX - minX) / this.scale;
+            const NodesHeight = (maxY - minY) / this.scale;
+            const mainWidth = this.divMain.getBoundingClientRect().width;
+            const mainHeight = this.divMain.getBoundingClientRect().height;
+
+            const scaleX = mainWidth / NodesWidth;
+            const scaleY = mainHeight / NodesHeight;
+
+            scale = Math.min(scale, Math.min(scaleX, scaleY));
+        }
+
+        // scale = scale * this.scale;
+        scale *= 0.9;
+        scale = Math.max(this.minScale, Math.min(1, scale));
+        const center = {
+            x: (minX + maxX) / 2,
+            y: (minY + maxY) / 2 
+        };
+        const rectMain = this.divMain.getBoundingClientRect();
+        const centerView = {
+            x: rectMain.width / 2 + rectMain.left,
+            y: rectMain.height / 2 + rectMain.top
+        };
+        const newScroll = this.getNewScroll(center, centerView, this.scale, scale);
+
+        this.setZoom(scale);
+        this.setScroll(newScroll);
+
+    },
+
+    setZoom(scale) {
+        for (const divSection of this.divMain.getElementsByTagName('section')) {
+            divSection.style.transform = `scale(${scale}, ${scale})`;
+        }
+        this.scale = scale;
+    },
+
+    getNewScrollEvent(e, scaleOld, scaleNew) {
+        const pos = {x: e.clientX, y: e.clientY};
+        return this.getNewScroll(pos, pos, scaleOld, scaleNew);
+    },
+
+    getNewScroll(pos, posView, scaleOld, scaleNew) {
+        const offset = { x: this.divMain.scrollLeft, y: this.divMain.scrollTop };
+        const rect = this.divMain.getBoundingClientRect();
         const imageLoc = {
-            x: e.clientX - rect.left + offset.x,
-            y: e.clientY - rect.top + offset.y
+            x: pos.x - rect.left + offset.x,
+            y: pos.y - rect.top + offset.y
         };
 
         const zoomPoint = {
@@ -123,10 +177,15 @@ ZoomDrag.prototype = {
         };
 
         const newScroll = {
-            x: zoomPoint.x - (e.clientX - rect.left),
-            y: zoomPoint.y - (e.clientY - rect.top)
+            x: zoomPoint.x - (posView.x - rect.left),
+            y: zoomPoint.y - (posView.y - rect.top)
         };
         return newScroll
+    },
+
+    setScroll(scroll) {
+        this.divMain.scrollTop = scroll.y;
+        this.divMain.scrollLeft = scroll.x;
     },
 
     getMoveEnabled() {

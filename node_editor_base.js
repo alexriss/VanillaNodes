@@ -54,8 +54,9 @@ function NodeFlowEditor(boardElement, boardWrapperElement) {
     boardElement.addEventListener("mousedown", (e) => this.handleOnMouseDownBoard(e));
     boardElement.addEventListener("mousemove", (e) => this.handleOnMouseMove(e));
 
-    document.addEventListener("keydown", (e) => {
-        if (e.key === "Delete") {
+    // boardWrapper needs to have a tabindex attribute to be able to handle keydown events
+    boardWrapperElement.addEventListener("keydown", (e) => {
+        if (e.key === "Delete" || e.key === "Backspace") {
             for (const node of this.selectedNodes) {
                 this.handleOnClickDelete(node, e);
             }
@@ -69,7 +70,7 @@ function NodeFlowEditor(boardElement, boardWrapperElement) {
     });
 
     this.setupMenu();
-    this.zoomDrag = new ZoomDrag(this.boardWrapperElement);
+    this.zoomDrag = new ZoomDrag(this.boardWrapperElement, "article.node");
     this.addNode({type: "Output"}, 600, 600);
 }
 
@@ -141,11 +142,13 @@ NodeFlowEditor.prototype = {
         return node;
     },
 
-    addNode(node, x=-1, y=-1) {
-        if (x != -1 && y != -1) {
-            node.prevPosition = { x: x, y: y };
-            node.currPosition = { x: x, y: y };
+    addNode(node, offsetX=0, offsetY=0) {
+        if (!node.hasOwnProperty("currPosition")) {
+            node.currPosition = { x: 0, y: 0 };
         }
+        node.currPosition.x += offsetX;
+        node.currPosition.y += offsetY;
+        node.prevPosition = { x: node.currPosition.x, y: node.currPosition.y };
 
         if (!node.hasOwnProperty("id")) {
             const id = `node_${Math.random().toString(36).substring(2, 8)}`;
@@ -688,7 +691,7 @@ NodeFlowEditor.prototype = {
         return {nodes, edges};
     },
 
-    loadData(data, clear=true) {
+    loadData(data, clear=true, centerNodes=true, adjustView=true) {
         // clear board
         if (clear) {
             while (this.nodes.length > 0) {
@@ -698,16 +701,45 @@ NodeFlowEditor.prototype = {
                 this.deleteEdge(this.edges[0]);
             }
         }
+
+        let offsetX = 0;
+        let offsetY = 0;
+        if (centerNodes) {
+            let minX = Infinity;
+            let minY = Infinity;
+            let maxX = 0;
+            let maxY = 0;
+            data.nodes.map((node) => {
+                minX = Math.min(minX, node.currPosition.x);
+                minY = Math.min(minY, node.currPosition.y);
+                maxX = Math.max(maxX, node.currPosition.x);
+                maxY = Math.max(maxY, node.currPosition.y);
+            });
+
+            const boardWidth = this.boardElement.getBoundingClientRect().width / this.zoomDrag.scale;
+            const boardHeight = this.boardElement.getBoundingClientRect().height / this.zoomDrag.scale;
+            const nodesWidth = maxX - minX;
+            const nodesHeight = maxY - minY;
+
+            console.log(boardWidth, boardHeight, nodesWidth, nodesHeight)
+            offsetX = (boardWidth - nodesWidth) / 2 - minX;
+            offsetY = (boardHeight - nodesHeight) / 2 - minY;
+        }
+
         // load from exported data
         if (data.hasOwnProperty("nodes")) {
             const nodes = data.nodes.map((node) => {
-                return this.addNode(node);
+                return this.addNode(node, offsetX, offsetY);
             });
         }
         if (data.hasOwnProperty("edges")) {
             const edges = data.edges.map((edge) => {
                 return this.addEdge(edge);
             });
+        }
+
+        if (adjustView) {
+            this.zoomDrag.adjustView();
         }
     }
 }
