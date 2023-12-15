@@ -44,26 +44,30 @@ ContextMenu.prototype = {
 
     showMenu(e) {
         this.menuWrapper.classList.add('is-active');
-        const scaleX = this.wrapper.getBoundingClientRect().width / this.wrapper.offsetWidth;
-        const scaleY = this.wrapper.getBoundingClientRect().height / this.wrapper.offsetHeight;
-        let left = (e.x + this.wrapper.parentElement.scrollLeft - 20) / scaleX;
-        let top = (e.y + this.wrapper.parentElement.scrollTop - 10) / scaleY;
+        const rect = this.wrapper.getBoundingClientRect();
+        const scaleX = rect.width / this.wrapper.offsetWidth;
+        const scaleY = rect.height / this.wrapper.offsetHeight;
+        const offsetLeft = rect.left;
+        const offsetTop = rect.top;
+
+        let left = (e.x - offsetLeft - 20) / scaleX;
+        let top = (e.y - offsetTop - 10) / scaleY;
         this.menuWrapper.style.left = left + 'px';
         this.menuWrapper.style.top = top + 'px';
         
         // adjust position if menu overflows
         const menuWrapper = this.menuWrapper.querySelector('#dropdown-menu-node'); // we need this element, because it has the size
-        const rect = menuWrapper.getBoundingClientRect();
+        const rectMenu = menuWrapper.getBoundingClientRect();
         const wrapperWidth = this.wrapper.offsetWidth;
         const wrapperHeight = this.wrapper.offsetHeight;
 
-        if (rect.right > wrapperWidth) {
-            left = (wrapperWidth - rect.width) / scaleX;
+        if (rectMenu.right > wrapperWidth) {
+            left = (wrapperWidth - rectMenu.width) / scaleX;
             left = Math.max(left, 0);
             this.menuWrapper.style.left = left + 'px';
         }
-        if (rect.bottom > wrapperHeight) {
-            top += (wrapperHeight - rect.bottom) / scaleY;  // we have to do this because the heights are different
+        if (rectMenu.bottom > wrapperHeight) {
+            top += (wrapperHeight - rectMenu.bottom) / scaleY;  // we have to do this because the heights are different
             top = Math.max(top, 0);
             this.menuWrapper.style.top = top + 'px';
         }

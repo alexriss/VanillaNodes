@@ -8,16 +8,11 @@
     <link rel="stylesheet" href="contextmenu.css">
     <script src="node_editor_base.js"></script>
     <script src="contextmenu.js"></script>
+    <script src="zoom_drag.js"></script>
 </head>
 <body>
-    <!--
-        based on:
-        https://www.youtube.com/watch?v=1JNbGf8dhAQ
-    -->
-
-
     <div id="boardWrapper" class="boardWrapper">
-        <div id="board" class="board">
+        <section id="board" class="board">
             <div class="dropdown is-active" id="dropdown-menu-node-wrapper">
                 <div>
                 <article class="message is-info dropdown-menu">
@@ -38,7 +33,7 @@
                 </article>
                 </div>
             </div>
-        </div>
+        </section>
 
         <template class="nodeTemplateAdd">
             <article class="node message is-info is-small">
@@ -166,12 +161,17 @@
         n.addNode({type: "Average"}, 350,400);
 
         document.addEventListener('keydown', function(event) {
-            console.log(0);
             if(event.shiftKey && event.key == 'E') {
                 window.nodeData = n.exportData();
+                // copy to clipboard
+                navigator.clipboard.writeText(JSON.stringify(window.nodeData));
             }
             if(event.shiftKey && event.key == 'I') {
-                n.loadData(window.nodeData);
+                // load from clipboard
+                navigator.clipboard.readText().then(clipText => {
+                    window.nodeData = JSON.parse(clipText);
+                    n.loadData(window.nodeData);
+                });
             }
         });
     </script>

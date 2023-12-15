@@ -1,3 +1,7 @@
+// Node flow editor in pure JS
+// inspired by:
+// https://www.youtube.com/watch?v=1JNbGf8dhAQ
+
 function NodeFlowEditor(boardElement, boardWrapperElement) {
     this.boardElement = boardElement;
     this.boardWrapperElement = boardWrapperElement;
@@ -18,9 +22,6 @@ function NodeFlowEditor(boardElement, boardWrapperElement) {
     
     this.nodes = [];
     this.edges = [];
-
-    this.scale = 1;
-    this.scaleMax = 5;
 
     this.maxZindex = 1;
 
@@ -49,23 +50,6 @@ function NodeFlowEditor(boardElement, boardWrapperElement) {
             },
     };
 
-    boardElement.addEventListener(
-        "wheel",
-        (event) => {
-            // Update scale
-            this.scale += event.deltaY * -0.005;
-
-            // Restrict scale
-            this.scale = Math.min(Math.max(1, this.scale), this.scaleMax);
-
-            // Apply scale transform
-            boardElement.style.transform = `scale(${this.scale})`;
-            boardElement.style.marginTop = `${(this.scale - 1) * 50}vh`;
-            boardElement.style.marginLeft = `${(this.scale - 1) * 50}vw`;
-        },
-        { passive: false }
-    );
-
     boardElement.addEventListener("mouseup", (e) => this.handleOnMouseUpBoard(e));
     boardElement.addEventListener("mousedown", (e) => this.handleOnMouseDownBoard(e));
     boardElement.addEventListener("mousemove", (e) => this.handleOnMouseMove(e));
@@ -85,6 +69,7 @@ function NodeFlowEditor(boardElement, boardWrapperElement) {
     });
 
     this.setupMenu();
+    this.zoomDrag = new ZoomDrag(this.boardWrapperElement);
     this.addNode({type: "Output"}, 600, 600);
 }
 
@@ -114,10 +99,10 @@ NodeFlowEditor.prototype = {
         this.grabbingBoard = value;
         if (value) {
             this.boardElement.classList.add("boardDragging");
-            this.boardElement.classList.remove("board");
+            this.zoomDrag.setMoveEnabled(true);
         } else {
-            this.boardElement.classList.add("board");
             this.boardElement.classList.remove("boardDragging");
+            this.zoomDrag.setMoveEnabled(false);
         }
     },
 
@@ -202,13 +187,15 @@ NodeFlowEditor.prototype = {
             const inputPositionX = refInput.getBoundingClientRect().left + Math.abs(refInput.getBoundingClientRect().right - refInput.getBoundingClientRect().left) / 2;
             const inputPositionY = refInput.getBoundingClientRect().top + Math.abs(refInput.getBoundingClientRect().bottom - refInput.getBoundingClientRect().top) / 2;
 
+            const offsetLeft = this.boardElement.getBoundingClientRect().left;
+            const offsetTop = this.boardElement.getBoundingClientRect().top;
             edge.currStartPosition = {
-                x: (outputPositionX + this.boardWrapperElement.scrollLeft) / this.scale,
-                y: (outputPositionY + this.boardWrapperElement.scrollTop) / this.scale,
+                x: (outputPositionX - offsetLeft) / this.zoomDrag.scale,
+                y: (outputPositionY - offsetTop) / this.zoomDrag.scale,
             };
             edge.currEndPosition = {
-                x: (inputPositionX + this.boardWrapperElement.scrollLeft) / this.scale,
-                y: (inputPositionY + this.boardWrapperElement.scrollTop) / this.scale,
+                x: (inputPositionX - offsetLeft) / this.zoomDrag.scale,
+                y: (inputPositionY - offsetTop) / this.zoomDrag.scale,
             };
 
             edge.position = {
@@ -347,7 +334,7 @@ NodeFlowEditor.prototype = {
     handleOnMouseUpBoard() {
         this.clickedPosition = { x: -1, y: -1 };
 
-        // Stop grabbing board
+        // // Stop grabbing board
         this.setGrabbingBoard(false);
 
         // If a new edge is being set and is not inside input
@@ -392,8 +379,8 @@ NodeFlowEditor.prototype = {
                 for (const node of this.selectedNodes) {
                     // Update node position
                     node.setCurrPosition({
-                        x: (node.prevPosition.x + deltaX) / this.scale,
-                        y: (node.prevPosition.y + deltaY) / this.scale,
+                        x: (node.prevPosition.x + deltaX) / this.zoomDrag.scale,
+                        y: (node.prevPosition.y + deltaY) / this.zoomDrag.scale,
                     });
 
                     // Update input edges positions
@@ -402,8 +389,8 @@ NodeFlowEditor.prototype = {
                         const edge = this.edges.find((edge) => edge.id === edgeId);
                         if (edge) {
                             edge.setCurrEndPosition({
-                                x: (edge.prevEndPosition.x + deltaX) / this.scale,
-                                y: (edge.prevEndPosition.y + deltaY) / this.scale,
+                                x: (edge.prevEndPosition.x + deltaX) / this.zoomDrag.scale,
+                                y: (edge.prevEndPosition.y + deltaY) / this.zoomDrag.scale,
                             })
                         }
                     }
@@ -414,8 +401,8 @@ NodeFlowEditor.prototype = {
                         const edge = this.edges.find((edge) => edge.id === edgeId);
                         if (edge) {
                             edge.setCurrStartPosition({
-                                x: (edge.prevStartPosition.x + deltaX) / this.scale,
-                                y: (edge.prevStartPosition.y + deltaY) / this.scale,
+                                x: (edge.prevStartPosition.x + deltaX) / this.zoomDrag.scale,
+                                y: (edge.prevStartPosition.y + deltaY) / this.zoomDrag.scale,
                             });
                         }
                     }
@@ -424,19 +411,21 @@ NodeFlowEditor.prototype = {
 
             // User clicked on board, move board
             else {
-                const deltaX = event.x - this.clickedPosition.x;
-                const deltaY = event.y - this.clickedPosition.y;
+                // const deltaX = event.x - this.clickedPosition.x;
+                // const deltaY = event.y - this.clickedPosition.y;
 
-                this.boardWrapperElement.scrollBy(-deltaX, -deltaY);
-                this.clickedPosition = { x: event.x, y: event.y };
+                // this.boardWrapperElement.scrollBy(-deltaX, -deltaY);
+                // this.clickedPosition = { x: event.x, y: event.y };
             }
         }
 
         // User is setting new edge
         if (this.newEdge !== null) {
+            const offsetLeft = this.boardElement.getBoundingClientRect().left;
+            const offsetTop = this.boardElement.getBoundingClientRect().top;
             this.setNewEdgeCurrEndPosition({
-                x: (event.x + this.boardWrapperElement.scrollLeft) / this.scale,
-                y: (event.y + +this.boardWrapperElement.scrollTop) / this.scale,
+                x: (event.x - offsetLeft) / this.zoomDrag.scale,
+                y: (event.y - offsetTop) / this.zoomDrag.scale,
             });
         }
     },
@@ -466,8 +455,8 @@ NodeFlowEditor.prototype = {
         for (const node of this.selectedNodes) {
             // Update node position
             node.setPrevPosition({
-                x: node.currPosition.x * this.scale,
-                y: node.currPosition.y * this.scale
+                x: node.currPosition.x * this.zoomDrag.scale,
+                y: node.currPosition.y * this.zoomDrag.scale
             });
 
             // this node should go on top of the others
@@ -479,8 +468,8 @@ NodeFlowEditor.prototype = {
                 const edge = this.edges.find((edge) => edge.id === edgeId);
                 if (edge) {
                     edge.setPrevEndPosition({
-                        x: edge.currEndPosition.x * this.scale,
-                        y: edge.currEndPosition.y * this.scale
+                        x: edge.currEndPosition.x * this.zoomDrag.scale,
+                        y: edge.currEndPosition.y * this.zoomDrag.scale
                     });
                 }
             }
@@ -491,8 +480,8 @@ NodeFlowEditor.prototype = {
                 const edge = this.edges.find((edge) => edge.id === edgeId);
                 if (edge) {
                     edge.setPrevStartPosition({
-                        x: edge.currStartPosition.x * this.scale,
-                        y: edge.currStartPosition.y * this.scale
+                        x: edge.currStartPosition.x * this.zoomDrag.scale,
+                        y: edge.currStartPosition.y * this.zoomDrag.scale
                     });
                 }
             }
@@ -511,8 +500,10 @@ NodeFlowEditor.prototype = {
 
     handleOnClickAdd(event, type) {
         // Positions taking into account scale and scroll
-        const x = (event.x + this.boardWrapperElement.scrollLeft) / this.scale;
-        const y = (event.y + this.boardWrapperElement.scrollTop) / this.scale;
+        const offsetLeft = this.boardElement.getBoundingClientRect().left;
+        const offsetTop = this.boardElement.getBoundingClientRect().top;
+        const x = (event.x - offsetLeft) / this.zoomDrag.scale;
+        const y = (event.y -offsetTop) / this.zoomDrag.scale;
 
         this.addNode({type: type}, x, y);
     },
@@ -564,22 +555,24 @@ NodeFlowEditor.prototype = {
         // Deselect node
         this.setSelectedNode(null);
 
+        const offsetTop = this.boardElement.getBoundingClientRect().top;
+        const offsetLeft = this.boardElement.getBoundingClientRect().left;
         // Create edge position signals with updated scale value
         const prevEdgeStart = {
-            x: (outputPositionX + this.boardWrapperElement.scrollLeft) / this.scale,
-            y: (outputPositionY + this.boardWrapperElement.scrollTop) / this.scale,
+            x: (outputPositionX - offsetLeft) / this.zoomDrag.scale,
+            y: (outputPositionY - offsetTop) / this.zoomDrag.scale,
         };
         const currEdgeStart = {
-            x: (outputPositionX + this.boardWrapperElement.scrollLeft) / this.scale,
-            y: (outputPositionY + this.boardWrapperElement.scrollTop) / this.scale,
+            x: (outputPositionX - offsetLeft) / this.zoomDrag.scale,
+            y: (outputPositionY - offsetTop) / this.zoomDrag.scale,
         };
         const prevEdgeEnd = {
-            x: (outputPositionX + this.boardWrapperElement.scrollLeft) / this.scale,
-            y: (outputPositionY + this.boardWrapperElement.scrollTop) / this.scale,
+            x: (outputPositionX - offsetLeft) / this.zoomDrag.scale,
+            y: (outputPositionY - offsetTop) / this.zoomDrag.scale,
         };
         const currEdgeEnd = {
-            x: (outputPositionX + this.boardWrapperElement.scrollLeft) / this.scale,
-            y: (outputPositionY + this.boardWrapperElement.scrollTop) / this.scale,
+            x: (outputPositionX - offsetLeft) / this.zoomDrag.scale,
+            y: (outputPositionY - offsetTop) / this.zoomDrag.scale,
         };
 
         this.setNewEdge({
@@ -845,20 +838,16 @@ NodeFlowEditorNode.prototype = {
         // Disable drag node
         event.stopPropagation();
 
-        const centerX =
-            ref.getBoundingClientRect().left + Math.abs(ref.getBoundingClientRect().right - ref.getBoundingClientRect().left) / 2;
-        const centerY =
-            ref.getBoundingClientRect().top + Math.abs(ref.getBoundingClientRect().bottom - ref.getBoundingClientRect().top) / 2;
-
+        const rect = ref.getBoundingClientRect();
+        const centerX = rect.left + Math.abs(rect.right - rect.left) / 2;
+        const centerY = rect.top + Math.abs(rect.bottom - rect.top) / 2;
         this.onMouseDownOutput(centerX, centerY, this.id, outputIndex, inputIndex);
     },
 
     handleMouseEnterInput(ref, outputIndex, inputIndex) {
-        const centerX =
-            ref.getBoundingClientRect().left + Math.abs(ref.getBoundingClientRect().right - ref.getBoundingClientRect().left) / 2;
-        const centerY =
-            ref.getBoundingClientRect().top + Math.abs(ref.getBoundingClientRect().bottom - ref.getBoundingClientRect().top) / 2;
-
+        const rect = ref.getBoundingClientRect();
+        const centerX = rect.left + Math.abs(rect.right - rect.left) / 2;
+        const centerY = rect.top + Math.abs(rect.bottom - rect.top) / 2;
         this.onMouseEnterInput(centerX, centerY, this.id, outputIndex, inputIndex);
     },
 

@@ -1,37 +1,41 @@
 body {
     margin: 0;
+    padding: 0;
 }
 
 
 /* board  */
 
 .boardWrapper {
-    position: fixed;
-    width: 100vw;
-    height: 100vh;
-    top: 0px;
-    left: 0px;
-    overflow: scroll;
+    position: absolute;
+    width: 600px;
+    height: 400px;
+    top: 100px;
+    left: 100px;
+    overflow: hidden;
+    margin: 0;
+    padding: 0;
 }
 
 .board {
-    position: relative;
-    width: 100vw;
-    height: 100vh;
+    position: absolute;
+    margin: 0;
+    padding: 0;
+    width: 200%;
+    height: 200%;
+    min-width:3000px;
+    min-height:3000px;
     background-size: 30px 30px;
     background-image: radial-gradient(circle, #b8b8b8bf 1px, rgba(0, 0, 0, 0) 1px);
+    background-color: antiquewhite;
+    border: dashed 2px #909090;
+    transform-origin: 0 0;
     /* cursor: grab; */
 }
 
-.boardDragging {
-    position: relative;
-    width: 100vw;
-    height: 100vh;
-    background-size: 30px 30px;
-    background-image: radial-gradient(circle, #b8b8b8bf 1px, rgba(0, 0, 0, 0) 1px);
+.boardGrabbing {
     cursor: grabbing;
 }
-
 
 /* node */
 
