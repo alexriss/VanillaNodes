@@ -671,12 +671,18 @@ NodeFlowEditor.prototype = {
     exportData() {
         // export all the node and edge data
         const nodes = this.nodes.map((node) => {
+            // get parameters from node
+            const params = {};
+            node.node.querySelectorAll("input, select").forEach((input) => {
+                params[input.name] = input.value;
+            });
             return {
                 id: node.id,
                 type: node.type,
                 currPosition: node.currPosition,
                 inputEdgeIds: node.inputEdgeIds,
                 outputEdgeIds: node.outputEdgeIds,
+                params: params
             };
         });
         const edges = this.edges.map((edge) => {
@@ -801,6 +807,16 @@ NodeFlowEditorNode.prototype = {
             deleteButton.style.display = "none";
         } else {
             deleteButton.addEventListener("click", (e) => this.onClickDelete(e));
+        }
+
+        // parameters
+        if (this.hasOwnProperty("params")) {
+            const params = this.node.querySelectorAll("input, select");
+            for (let i = 0; i < params.length; i++) {
+                if (this.params.hasOwnProperty(params[i].name)) {
+                    params[i].value = this.params[params[i].name];
+                }
+            }
         }
 
         // Add node to board
