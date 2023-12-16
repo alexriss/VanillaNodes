@@ -26,6 +26,8 @@ function NodeFlowEditor(boardElement, boardWrapperElement) {
 
     this.maxZindex = 1;
 
+    this.clipboard = "";
+
     this.nodeTypes = {
         Output: {
                 name: "Output",
@@ -67,6 +69,31 @@ function NodeFlowEditor(boardElement, boardWrapperElement) {
             if (this.selectedEdgeTemp !== null) {
                 this.handleOnDeleteEdge(this.selectedEdgeTemp);
             }
+        } else if (e.key === "Escape") {
+            this.setSelectedNode(null);
+            this.selectedEdge = null;
+            this.selectedEdgeTemp = null;
+            this.updateEdges();
+        } else if (e.key === "a" && (e.ctrlKey || e.metaKey)) {
+            e.preventDefault();
+            this.setSelectedNode(null);
+            for (let i = 0; i < this.nodes.length; i++) {
+                this.setSelectedNode(this.nodes[i], false, true);
+            }
+        } else if (e.key === "c" && (e.ctrlKey || e.metaKey)) {
+            e.preventDefault();
+            const data = this.exportData(true);
+            this.clipboard = JSON.stringify(data);
+        } else if (e.key === "v" && (e.ctrlKey || e.metaKey)) {
+            e.preventDefault();
+            if (this.clipboard.length > 0) {
+                let data = JSON.parse(this.clipboard);
+                data = this.adjustData(data);
+                this.loadData(data, false, false, false, true);
+            }
+        } else if (e.key === "z" && (e.ctrlKey || e.metaKey)) {
+            // e.preventDefault();
+            // todo: undo manager
         }
     });
 
@@ -156,22 +183,43 @@ NodeFlowEditor.prototype = {
             const node = this.nodes.find((node) => node.node === nodes[i]);
             if (node) {
                 this.selectedNodes.add(node);
+                node.setSelected(true);
             }
         }
     },
 
-    addNode(node, offsetX=0, offsetY=0) {
+    IsNodeAtPosition(x, y, minDist=10) {
+        // returns true if there is a node at the position
+        for (let i = 0; i < this.nodes.length; i++) {
+            if (Math.abs(x - this.nodes[i].currPosition.x) < minDist &&
+                Math.abs(y - this.nodes[i].currPosition.y) < minDist) {
+                    return true;
+                }
+        }
+        return false;
+    },
+
+    addNode(node, offsetX=0, offsetY=0, onTop=true) {
         if (!node.hasOwnProperty("currPosition")) {
-            node.currPosition = { x: 0, y: 0 };
+            node.currPosition = { x: 20, y: 20 };
         }
         node.currPosition.x += offsetX;
         node.currPosition.y += offsetY;
+
+        while (this.IsNodeAtPosition(node.currPosition.x, node.currPosition.y)) {
+            node.currPosition.x += 20;
+            node.currPosition.y += 20;
+        }
+
         node.prevPosition = { x: node.currPosition.x, y: node.currPosition.y };
 
         if (!node.hasOwnProperty("id")) {
             const id = `node_${Math.random().toString(36).substring(2, 8)}`;
             node.id = id;
         }
+        
+        this.maxZindex++;
+        const zIndex = (onTop) ? this.maxZindex : 0;
 
         const nodeObj = new NodeFlowEditorNode(
             this.boardElement, this.boardWrapperElement,
@@ -186,7 +234,8 @@ NodeFlowEditor.prototype = {
                 onMouseDownOutput: (x, y, id, indO, indI) => this.handleOnMouseDownOutput(x, y, node.id, indO, indI),
                 onMouseEnterInput: (x, y, id, indO, indI) => this.handleOnMouseEnterInput(x, y, node.id, indO, indI),
                 onMouseLeaveInput: (id, indO, indI) => this.handleOnMouseLeaveInput(node.id, indO, indI),
-            }
+            },
+            zIndex
         )
         // Update global nodes array
         this.nodes.push(nodeObj);
@@ -194,7 +243,22 @@ NodeFlowEditor.prototype = {
 
     addEdge(edge, cleanup=true) {
         // adds egde from loaded objects
+
+        const nodeStart = this.nodes.find((node) => node.id === edge.nodeStartId);
+        const nodeEnd = this.nodes.find((node) => node.id === edge.nodeEndId);
+
+        // dont add edge if the nodes dont exist
+        if (nodeStart === undefined || nodeEnd === undefined) {
+            return;
+        }
+        
         edge.id = `edge_${edge.nodeStartId}_${edge.nodeStartIndex}_${edge.nodeEndId}_${edge.nodeEndIndex}`;
+
+        // dont add the same edge twice
+        if (nodeStart.outputEdgeIds.includes(edge.id) && nodeEnd.inputEdgeIds.includes(edge.id)) {
+            return;
+        }
+
         if (!edge.hasOwnProperty("position") || !edge.hasOwnProperty("currStartPosition") || !edge.hasOwnProperty("currEndPosition")) {
             const refOutput = this.nodes.find((node) => node.id === edge.nodeStartId).node.querySelectorAll(".outputNode")[edge.nodeStartIndex];
             const refInput = this.nodes.find((node) => node.id === edge.nodeEndId).node.querySelectorAll(".inputNode")[edge.nodeEndIndex];
@@ -234,19 +298,6 @@ NodeFlowEditor.prototype = {
                     delete edge[prop];
                 }
             });
-        }
-
-        const nodeStart = this.nodes.find((node) => node.id === edge.nodeStartId);
-        const nodeEnd = this.nodes.find((node) => node.id === edge.nodeEndId);
-
-        // dont add edge if the nodes dont exist
-        if (nodeStart === undefined || nodeEnd === undefined) {
-            return;
-        }
-
-        // dont add the same edge twice
-        if (nodeStart.outputEdgeIds.includes(edge.id) && nodeEnd.inputEdgeIds.includes(edge.id)) {
-            return;
         }
 
         nodeStart.outputEdgeIds = [...nodeStart.outputEdgeIds, edge.id];
@@ -714,9 +765,9 @@ NodeFlowEditor.prototype = {
         this.boardElement.removeChild(node.node);
     },
 
-    exportData() {
+    exportData(selectedOnly=false) {
         // export all the node and edge data
-        const nodes = this.nodes.map((node) => {
+        let nodes = this.nodes.map((node) => {
             // get parameters from node
             const params = {};
             node.node.querySelectorAll("input, select").forEach((input) => {
@@ -731,7 +782,8 @@ NodeFlowEditor.prototype = {
                 params: params
             };
         });
-        const edges = this.edges.map((edge) => {
+
+        let edges = this.edges.map((edge) => {
             return {
                 id: edge.id,
                 nodeStartId: edge.nodeStartId,
@@ -740,10 +792,67 @@ NodeFlowEditor.prototype = {
                 nodeEndIndex: edge.nodeEndIndex,
             };
         });
+
+        if (selectedOnly) {
+            const selectedNodeIds = [...this.selectedNodes].map((node) => node.id);
+            nodes = nodes.filter((node) => selectedNodeIds.includes(node.id));
+            edges = edges.filter((edge) => selectedNodeIds.includes(edge.nodeStartId) || selectedNodeIds.includes(edge.nodeEndId));
+        }
+
         return {nodes, edges};
     },
 
-    loadData(data, clear=true, centerNodes=true, adjustView=true) {
+    getNodesSpan(nodes) {
+        // returns the span of the nodes
+        let minX = Infinity;
+        let minY = Infinity;
+        let maxX = -Infinity;
+        let maxY = -Infinity;
+        nodes.map((node) => {
+            minX = Math.min(minX, node.currPosition.x);
+            minY = Math.min(minY, node.currPosition.y);
+            maxX = Math.max(maxX, node.currPosition.x);
+            maxY = Math.max(maxY, node.currPosition.y);
+        });
+        return {minX, minY, maxX, maxY};
+    },
+
+    adjustData(data) {
+        // relabels the IDs of nodes and edges, so that they can be pasted in the same board
+        // also the output node is remove (only one of them should exist)
+        const dict = {}; // dictionary of old id -> new id
+        let nodes = data.nodes.map((node) => {
+            const id = `node_${Math.random().toString(36).substring(2, 8)}`;
+            dict[node.id] = id;
+            return {
+                ...node,
+                id: id,
+            };
+        });
+        const edges = data.edges.map((edge) => {
+            const nodeStartId = dict[edge.nodeStartId];
+            const nodeEndId = dict[edge.nodeEndId];
+            const id = `edge_${nodeStartId}_${edge.nodeStartIndex}_${nodeEndId}_${edge.nodeEndIndex}`;
+            return {
+                ...edge,
+                id: id,
+                nodeStartId: nodeStartId,
+                nodeEndId: nodeEndId,
+            };
+        });
+
+        // remove output node
+        // we do not need to remove the edges, as they will only be added if the nodes exist
+        nodes = nodes.filter((node) => node.type.name !== "Output");
+
+        return {nodes, edges};
+    },
+
+    loadData(data, clear=true, centerNodes=true, adjustView=true, select=false) {
+        if (data == null && typeof val !== 'object' && !hasOwnProperty(data, "nodes") && !hasOwnProperty(data, "edges")) {
+            return;
+        }
+        
         // clear board
         if (clear) {
             while (this.nodes.length > 0) {
@@ -757,41 +866,43 @@ NodeFlowEditor.prototype = {
         let offsetX = 0;
         let offsetY = 0;
         if (centerNodes) {
-            let minX = Infinity;
-            let minY = Infinity;
-            let maxX = 0;
-            let maxY = 0;
-            data.nodes.map((node) => {
-                minX = Math.min(minX, node.currPosition.x);
-                minY = Math.min(minY, node.currPosition.y);
-                maxX = Math.max(maxX, node.currPosition.x);
-                maxY = Math.max(maxY, node.currPosition.y);
-            });
+            // calculate the span of the nodes
+            const {minX, minY, maxX, maxY} = this.getNodesSpan(data.nodes);
 
             const boardWidth = this.boardElement.getBoundingClientRect().width / this.zoomDrag.scale;
             const boardHeight = this.boardElement.getBoundingClientRect().height / this.zoomDrag.scale;
             const nodesWidth = maxX - minX;
             const nodesHeight = maxY - minY;
 
-            console.log(boardWidth, boardHeight, nodesWidth, nodesHeight)
             offsetX = (boardWidth - nodesWidth) / 2 - minX;
             offsetY = (boardHeight - nodesHeight) / 2 - minY;
         }
 
         // load from exported data
+        let nodeIds = [];
         if (data.hasOwnProperty("nodes")) {
-            const nodes = data.nodes.map((node) => {
-                return this.addNode(node, offsetX, offsetY);
+            nodeIds = data.nodes.map((node) => {
+                this.addNode(node, offsetX, offsetY);
+                return node.id;
             });
         }
         if (data.hasOwnProperty("edges")) {
-            const edges = data.edges.map((edge) => {
-                return this.addEdge(edge);
+            data.edges.map((edge) => {
+                this.addEdge(edge);
             });
         }
 
         if (adjustView) {
             this.zoomDrag.adjustView();
+        }
+
+        if (select) {
+            this.setSelectedNode(null);
+            for (let i = 0; i < this.nodes.length; i++) {
+                if (nodeIds.includes(this.nodes[i].id)) {
+                    this.setSelectedNode(this.nodes[i], false, false);
+                }
+            }
         }
     },
 
@@ -828,7 +939,7 @@ NodeFlowEditor.prototype = {
     }
 }
 
-function NodeFlowEditorNode(boardElement, boardWrapper, nodeType, props) {
+function NodeFlowEditorNode(boardElement, boardWrapper, nodeType, props, zIndex=0) {
     this.boardElement = boardElement;
     this.boardWrapper = boardWrapper;
     this.node = null;
@@ -840,7 +951,7 @@ function NodeFlowEditorNode(boardElement, boardWrapper, nodeType, props) {
     this.numberInputs = 0;
     this.numberOutputs = 0;
     this.selected = false;
-    this.zindex = 0;
+    this.zIndex = zIndex;
 
     this.inputEdgeIds = [];
     this.outputEdgeIds = [];
@@ -861,7 +972,7 @@ NodeFlowEditorNode.prototype = {
         this.node.style.transform = `translate(${this.currPosition.x}px, ${this.currPosition.y}px)`;
         this.node.addEventListener("mousedown", (e) => this.onMouseDownNode(e));
         this.node.addEventListener("mouseup", (e) => this.onMouseUpNode(e));
-        this.node.style.zindex = this.zindex;
+        this.node.style.zIndex = this.zIndex;
 
         // Inputs
         const inputs = node.querySelectorAll(".inputNode");
