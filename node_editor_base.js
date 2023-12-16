@@ -7,6 +7,7 @@ function NodeFlowEditor(boardElement, boardWrapperElement) {
     this.boardWrapperElement = boardWrapperElement;
 
     this.grabbingBoard = false;
+    this.selecting = false;
     this,grabbingNode = false;
     
     this.selectedNodes = new Set();
@@ -71,6 +72,7 @@ function NodeFlowEditor(boardElement, boardWrapperElement) {
 
     this.setupMenu();
     this.zoomDrag = new ZoomDrag(this.boardWrapperElement, "article.node");
+    this.setupSelection();
     this.addNode({type: "Output"}, 600, 600);
 }
 
@@ -107,6 +109,10 @@ NodeFlowEditor.prototype = {
         }
     },
 
+    setSelecting(value) {
+        this.selecting = value;
+    },
+
     setSelectedNodeId(id, unselect=true, switchState=false) {
         const node = this.nodes.find((node) => node.id === id);
         return this.setSelectedNode(node, unselect, switchState);
@@ -140,6 +146,18 @@ NodeFlowEditor.prototype = {
         }
 
         return node;
+    },
+
+    updateSelectedNodes() {
+        // updates selected node list based on the css classes
+        this.selectedNodes.clear();
+        const nodes = this.boardElement.querySelectorAll(".nodeSelected");
+        for (let i = 0; i < nodes.length; i++) {
+            const node = this.nodes.find((node) => node.node === nodes[i]);
+            if (node) {
+                this.selectedNodes.add(node);
+            }
+        }
     },
 
     addNode(node, offsetX=0, offsetY=0) {
@@ -323,14 +341,18 @@ NodeFlowEditor.prototype = {
         this.contextMenu.hideMenu();
 
         // Deselect node
-        this.setSelectedNode(null);
+        if (!event.shiftKey && !event.ctrlKey && !event.metaKey) {
+            this.setSelectedNode(null);
+        }
 
         // Deselect edge
         this.selectedEdge = null;
         this.updateEdges();
 
         // Start grabbing board
-        this.setGrabbingBoard(true);
+        if (!event.shiftKey && !event.ctrlKey && !event.metaKey) {
+            this.setGrabbingBoard(true);
+        }
         this.clickedPosition = { x: event.x, y: event.y };
     },
 
@@ -371,6 +393,10 @@ NodeFlowEditor.prototype = {
     },
 
     handleOnMouseMove(event) {
+        if (this.selecting) {
+            return;
+        }
+        
         // User clicked somewhere
         if (this.clickedPosition.x >= 0 && this.clickedPosition.y >= 0) {
             // User clicked on node
@@ -412,7 +438,7 @@ NodeFlowEditor.prototype = {
                 }
             }
 
-            // User clicked on board, move board
+            // User clicked on board, move board (handled by zoom_drag.js)
             else {
                 // const deltaX = event.x - this.clickedPosition.x;
                 // const deltaY = event.y - this.clickedPosition.y;
@@ -436,6 +462,10 @@ NodeFlowEditor.prototype = {
     handleOnMouseDownNode(id, event) {
         // Prevent click on board
         event.stopPropagation();
+
+        if (this.selecting) {
+            return;
+        }
         
         this.contextMenu.hideMenu();
 
@@ -492,7 +522,7 @@ NodeFlowEditor.prototype = {
     },
 
     handleOnMouseUpNode(id, event) {
-        if (!this.grabbingNode && this.newEdge === null) {
+        if (!this.selecting && !this.grabbingNode && this.newEdge === null) {
             const unselect = (event.ctrlKey || event.shiftKey) ? false : true;
             let switchState = (event.ctrlKey || event.shiftKey) ? true : false;
             switchState = this.clickedNodeInitialState ? switchState : false;
@@ -554,6 +584,10 @@ NodeFlowEditor.prototype = {
 
     handleOnMouseDownOutput(outputPositionX, outputPositionY, nodeId, outputIndex, inputIndex) {
         this.contextMenu.hideMenu();
+
+        if (this.selecting) {
+            return;
+        }
         
         // Deselect node
         this.setSelectedNode(null);
@@ -594,6 +628,10 @@ NodeFlowEditor.prototype = {
     },
 
     handleOnMouseEnterInput(inputPositionX, inputPositionY, nodeId, outputIndex, inputIndex) {
+        if (this.selecting) {
+            return;
+        }
+
         // only connect input to output and output to input
         if (this.newEdge === null) {
             return;
@@ -615,6 +653,10 @@ NodeFlowEditor.prototype = {
 
     handleOnMouseDownEdge(edgeId) {
         this.contextMenu.hideMenu();
+
+        if (this.selecting) {
+            return;
+        }
         
         // Deselect node
         this.setSelectedNode(null);
@@ -625,6 +667,10 @@ NodeFlowEditor.prototype = {
     },
 
     handleOnMouseOverEdge(edgeId) {
+        if (this.selecting) {
+            return;
+        }
+
         // Select edge
         if (this.newEdge === null) {
             this.selectedEdgeTemp = edgeId;
@@ -747,6 +793,38 @@ NodeFlowEditor.prototype = {
         if (adjustView) {
             this.zoomDrag.adjustView();
         }
+    },
+
+    setupSelection() {
+        const that = this;
+        this.selectionArea = new SelectionArea({
+            container: '#boardWrapper',
+            selectables: ["article.node"],
+            startareas: ['#boardWrapper'],
+            boundaries: ['#boardWrapper'],
+            behaviour: {
+                overlap: 'intersect',
+            },
+        }).on('beforestart', ({store, event}) => {
+            // selection only with modifier keys
+            if (!event.shiftKey && !event.ctrlKey && !event.metaKey) {
+                return false;
+            }
+            this.setSelecting(true);
+            // this.resolveSelectables();
+        }).on('start', ({store, event}) => {
+
+        }).on('move', ({store: {changed: {added, removed}}}) => {
+            for (const el of added) {
+                el.classList.add('nodeSelected');
+            }
+            for (const el of removed) {
+                el.classList.remove('nodeSelected');
+            }
+        }).on('stop', () => {
+            that.updateSelectedNodes();
+            this.setSelecting(false);
+        });
     }
 }
 
