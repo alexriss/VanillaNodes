@@ -7,8 +7,8 @@ function NodeFlowEditor(boardElement, boardWrapperElement) {
     this.boardWrapperElement = boardWrapperElement;
 
     this.grabbingBoard = false;
-    this.selecting = false;
     this,grabbingNode = false;
+    this.selecting = false;
     
     this.selectedNodes = new Set();
     this.clickedNodeInitialState = false;
@@ -56,6 +56,7 @@ function NodeFlowEditor(boardElement, boardWrapperElement) {
     boardElement.addEventListener("mouseup", (e) => this.handleOnMouseUpBoard(e));
     boardElement.addEventListener("mousedown", (e) => this.handleOnMouseDownBoard(e));
     boardElement.addEventListener("mousemove", (e) => this.handleOnMouseMove(e));
+    boardElement.addEventListener("mouseleave", (e) => this.handleOnMouseUpBoard(e));
 
     // boardWrapper needs to have a tabindex attribute to be able to handle keydown events
     boardWrapperElement.addEventListener("keydown", (e) => {
