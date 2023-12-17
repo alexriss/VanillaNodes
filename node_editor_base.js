@@ -28,77 +28,10 @@ function NodeFlowEditor(boardElement, boardWrapperElement) {
 
     this.clipboard = "";
 
-    this.nodeTypes = {
-        Output: {
-                name: "Output",
-                template: "nodeTemplateOutput",
-                context: false,
-                permanent: true,
-                unique: true,
-            },
-        "Add": {
-                name: "Add",
-                template: "nodeTemplateAdd",
-            },
-        "Average": {
-                name: "Average",
-                template: "nodeTemplateAverage",
-            },
-        "Math": {
-                name: "Math",
-                template: "nodeTemplateMath",
-            },
-        "Number": {
-                name: "Number",
-                template: "nodeTemplateNumber",
-            },
-    };
+    this.nodeTypes = {};
 
-    boardElement.addEventListener("mouseup", (e) => this.handleOnMouseUpBoard(e));
-    boardElement.addEventListener("mousedown", (e) => this.handleOnMouseDownBoard(e));
-    boardElement.addEventListener("mousemove", (e) => this.handleOnMouseMove(e));
-    boardElement.addEventListener("mouseleave", (e) => this.handleOnMouseUpBoard(e));
-
-    // boardWrapper needs to have a tabindex attribute to be able to handle keydown events
-    boardWrapperElement.addEventListener("keydown", (e) => {
-        if (e.key === "Delete" || e.key === "Backspace") {
-            for (const node of this.selectedNodes) {
-                this.handleOnClickDelete(node, e);
-            }
-            if (this.selectedEdge !== null) {
-                this.handleOnDeleteEdge(this.selectedEdge);
-            }
-            if (this.selectedEdgeTemp !== null) {
-                this.handleOnDeleteEdge(this.selectedEdgeTemp);
-            }
-        } else if (e.key === "Escape") {
-            this.setSelectedNode(null);
-            this.selectedEdge = null;
-            this.selectedEdgeTemp = null;
-            this.updateEdges();
-        } else if (e.key === "a" && (e.ctrlKey || e.metaKey)) {
-            e.preventDefault();
-            this.setSelectedNode(null);
-            for (let i = 0; i < this.nodes.length; i++) {
-                this.setSelectedNode(this.nodes[i], false, true);
-            }
-        } else if (e.key === "c" && (e.ctrlKey || e.metaKey)) {
-            e.preventDefault();
-            const data = this.exportData(true);
-            this.clipboard = JSON.stringify(data);
-        } else if (e.key === "v" && (e.ctrlKey || e.metaKey)) {
-            e.preventDefault();
-            if (this.clipboard.length > 0) {
-                let data = JSON.parse(this.clipboard);
-                data = this.adjustData(data);
-                this.loadData(data, false, false, false, true);
-            }
-        } else if (e.key === "z" && (e.ctrlKey || e.metaKey)) {
-            // e.preventDefault();
-            // todo: undo manager
-        }
-    });
-
+    this.setupEvents();
+    this.setupNodeTypes();
     this.setupMenu();
     this.zoomDrag = new ZoomDrag(this.boardWrapperElement, "article.node");
     this.setupSelection();
@@ -107,6 +40,25 @@ function NodeFlowEditor(boardElement, boardWrapperElement) {
 
 
 NodeFlowEditor.prototype = {
+    setupNodeTypes() {
+        // setup nodeTypes object from templates
+        const templates = document.querySelectorAll("#nodeTemplates template");
+        for (let i = 0; i < templates.length; i++) {
+            const name = templates[i].getAttribute("data-name");
+            const context = !(templates[i].getAttribute("data-context") === "false");
+            const permanent = (templates[i].getAttribute("data-permanent") === "true");
+            const unique = (templates[i].getAttribute("data-unique") === "true");
+
+            this.nodeTypes[name] = {
+                name: name,
+                template: templates[i].id,
+                context: context,
+                permanent: permanent,
+                unique: unique,
+            };
+        }
+    },
+
     setupMenu() {
         const structure = [];
         // iterate over nodetypes object key/value pairs
@@ -124,6 +76,53 @@ NodeFlowEditor.prototype = {
 
         const menuWrapper = document.getElementById('dropdown-menu-node-wrapper');
         this.contextMenu = new ContextMenu(this.boardElement, menuWrapper,  structure);
+    },
+
+    setupEvents() {
+        this.boardElement.addEventListener("mouseup", (e) => this.handleOnMouseUpBoard(e));
+        this.boardElement.addEventListener("mousedown", (e) => this.handleOnMouseDownBoard(e));
+        this.boardElement.addEventListener("mousemove", (e) => this.handleOnMouseMove(e));
+        this.boardElement.addEventListener("mouseleave", (e) => this.handleOnMouseUpBoard(e));
+    
+        // boardWrapper needs to have a tabindex attribute to be able to handle keydown events
+        this.boardWrapperElement.addEventListener("keydown", (e) => {
+            if (e.key === "Delete" || e.key === "Backspace") {
+                for (const node of this.selectedNodes) {
+                    this.handleOnClickDelete(node, e);
+                }
+                if (this.selectedEdge !== null) {
+                    this.handleOnDeleteEdge(this.selectedEdge);
+                }
+                if (this.selectedEdgeTemp !== null) {
+                    this.handleOnDeleteEdge(this.selectedEdgeTemp);
+                }
+            } else if (e.key === "Escape") {
+                this.setSelectedNode(null);
+                this.selectedEdge = null;
+                this.selectedEdgeTemp = null;
+                this.updateEdges();
+            } else if (e.key === "a" && (e.ctrlKey || e.metaKey)) {
+                e.preventDefault();
+                this.setSelectedNode(null);
+                for (let i = 0; i < this.nodes.length; i++) {
+                    this.setSelectedNode(this.nodes[i], false, true);
+                }
+            } else if (e.key === "c" && (e.ctrlKey || e.metaKey)) {
+                e.preventDefault();
+                const data = this.exportData(true);
+                this.clipboard = JSON.stringify(data);
+            } else if (e.key === "v" && (e.ctrlKey || e.metaKey)) {
+                e.preventDefault();
+                if (this.clipboard.length > 0) {
+                    let data = JSON.parse(this.clipboard);
+                    data = this.adjustData(data);
+                    this.loadData(data, false, false, false, true);
+                }
+            } else if (e.key === "z" && (e.ctrlKey || e.metaKey)) {
+                // e.preventDefault();
+                // todo: undo manager
+            }
+        });
     },
 
     // Setters
@@ -489,15 +488,8 @@ NodeFlowEditor.prototype = {
                         }
                     }
                 }
-            }
-
-            // User clicked on board, move board (handled by zoom_drag.js)
-            else {
-                // const deltaX = event.x - this.clickedPosition.x;
-                // const deltaY = event.y - this.clickedPosition.y;
-
-                // this.boardWrapperElement.scrollBy(-deltaX, -deltaY);
-                // this.clickedPosition = { x: event.x, y: event.y };
+            } else {
+                // User clicked on board, move board (handled by zoom_drag.js)
             }
         }
 
@@ -970,7 +962,7 @@ function NodeFlowEditorNode(boardElement, boardWrapper, type, props, zIndex=0) {
 
 NodeFlowEditorNode.prototype = {
     setup() {
-        const tpl = this.boardWrapper.getElementsByClassName(this.type.template)[0];
+        const tpl = document.getElementById(this.type.template);
         const node = tpl.content.cloneNode(true);
 
         this.node = node.firstElementChild;
@@ -1122,7 +1114,7 @@ function NodeFlowEditorEdge(boardWrapper, board, props) {
 
 NodeFlowEditorEdge.prototype = {
     setup() {
-        const tpl = this.boardWrapper.querySelector(".edgeTemplate");
+        const tpl = document.getElementById("edgeTemplate");
         const edge = tpl.content.cloneNode(true);
         this.edge = edge.firstElementChild;
 

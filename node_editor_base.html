@@ -36,102 +36,104 @@
             </div>
         </section>
 
-        <template class="nodeTemplateAdd">
-            <article class="node message is-info is-small">
-                <div class="message-header is-small">
-                  Add
-                  <button class="delete is-small"></button>
-                </div>
-                <div class="message-body">
-                  
-                </div>
-                <div class="inputsWrapper">
-                    <div class="inputNode"></div>
-                    <div class="inputNode"></div>
-                </div>
-                <div class="outputsWrapper">
-                    <div class="outputNode"></div>
-                </div>
-            </article>
-        </template>
-
-        <template class="nodeTemplateAverage">
-            <article class="node message is-info is-small">
-                <div class="message-header is-small">
-                  Average
-                  <button class="delete is-small"></button>
-                </div>
-                <div class="message-body">
-                  
-                </div>
-                <div class="inputsWrapper">
-                    <div class="inputNode"></div>
-                </div>
-                <div class="outputsWrapper">
-                    <div class="outputNode"></div>
-                </div>
-            </article>
-        </template>
-
-        <template class="nodeTemplateMath">
-            <article class="node message is-info is-small">
-                <div class="message-header is-small">
-                  Math
-                  <button class="delete is-small"></button>
-                </div>
-                <div class="message-body">
-                    <select name="op" class="input node-math-type">
-                        <option value="add">Add</option>
-                        <option value="subtract">Subtract</option>
-                        <option value="multiply">Multiply</option>
-                        <option value="divide">Divide</option>
-                    </select>
-                </div>
-                <div class="inputsWrapper">
-                    <div class="inputNode"></div>
-                    <div class="inputNode"></div>
-                </div>
-                <div class="outputsWrapper">
-                    <div class="outputNode"></div>
-                </div>
-            </article>
-        </template>
-
-        <template class="nodeTemplateNumber">
-            <article class="node message is-info is-small">
-                <div class="message-header is-small">
-                  Number
-                  <button class="delete is-small"></button>
-                </div>
-                <div class="message-body">
-                    <input name="val" class="input node-math-value" type="number" step="0.1" value="0">
-                </div>
-                <div class="inputsWrapper">
-                    <div class="inputNode"></div>
-                    <div class="inputNode"></div>
-                </div>
-                <div class="outputsWrapper">
-                    <div class="outputNode"></div>
-                </div>
-            </article>
-        </template>
-
-        <template class="nodeTemplateOutput">
-            <article class="node message is-primary is-small  has-background-success-light">
-                <div class="message-header is-small">
-                  Output
-                  <button class="delete is-small"></button>
-                </div>
-                <div class="message-body">
+        <div id="nodeTemplates">
+            <template id="nodeTemplateAdd" data-name="Add">
+                <article class="node message is-info is-small">
+                    <div class="message-header is-small">
+                    Add
+                    <button class="delete is-small"></button>
+                    </div>
+                    <div class="message-body">
                     
-                </div>
-                <div class="inputsWrapper">
-                    <div class="inputNode"></div>
-                </div>
-            </article>
-        </template>
+                    </div>
+                    <div class="inputsWrapper">
+                        <div class="inputNode"></div>
+                        <div class="inputNode"></div>
+                    </div>
+                    <div class="outputsWrapper">
+                        <div class="outputNode"></div>
+                    </div>
+                </article>
+            </template>
 
-        <template class="edgeTemplate">
+            <template id="nodeTemplateAverage" data-name="Average">
+                <article class="node message is-info is-small">
+                    <div class="message-header is-small">
+                    Average
+                    <button class="delete is-small"></button>
+                    </div>
+                    <div class="message-body">
+                    
+                    </div>
+                    <div class="inputsWrapper">
+                        <div class="inputNode"></div>
+                    </div>
+                    <div class="outputsWrapper">
+                        <div class="outputNode"></div>
+                    </div>
+                </article>
+            </template>
+
+            <template id="nodeTemplateMath" data-name="Math">
+                <article class="node message is-info is-small">
+                    <div class="message-header is-small">
+                    Math
+                    <button class="delete is-small"></button>
+                    </div>
+                    <div class="message-body">
+                        <select name="op" class="input node-math-type">
+                            <option value="add">Add</option>
+                            <option value="subtract">Subtract</option>
+                            <option value="multiply">Multiply</option>
+                            <option value="divide">Divide</option>
+                        </select>
+                    </div>
+                    <div class="inputsWrapper">
+                        <div class="inputNode"></div>
+                        <div class="inputNode"></div>
+                    </div>
+                    <div class="outputsWrapper">
+                        <div class="outputNode"></div>
+                    </div>
+                </article>
+            </template>
+
+            <template id="nodeTemplateNumber" data-name="Number">
+                <article class="node message is-info is-small">
+                    <div class="message-header is-small">
+                    Number
+                    <button class="delete is-small"></button>
+                    </div>
+                    <div class="message-body">
+                        <input name="val" class="input node-math-value" type="number" step="0.1" value="0">
+                    </div>
+                    <div class="inputsWrapper">
+                        <div class="inputNode"></div>
+                        <div class="inputNode"></div>
+                    </div>
+                    <div class="outputsWrapper">
+                        <div class="outputNode"></div>
+                    </div>
+                </article>
+            </template>
+
+            <template id="nodeTemplateOutput" data-name="Output" data-context="false" data-permanent="true", data-unique="true">
+                <article class="node message is-primary is-small  has-background-success-light">
+                    <div class="message-header is-small">
+                    Output
+                    <button class="delete is-small"></button>
+                    </div>
+                    <div class="message-body">
+                        
+                    </div>
+                    <div class="inputsWrapper">
+                        <div class="inputNode"></div>
+                    </div>
+                </article>
+            </template>
+        </div>
+
+        <template id="edgeTemplate">
             <svg class="edgeWrapper">
                 <path class="edgeNew"/>
                 <g class="deleteButton deleteHidden" transform="translate(0,0)">
@@ -152,6 +154,7 @@
                 </g>
             </svg>
         </template>
+
     </div>
 
     <script type="text/javascript">
