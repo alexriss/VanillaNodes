@@ -34,6 +34,7 @@ function NodeFlowEditor(boardElement, boardWrapperElement) {
                 template: "nodeTemplateOutput",
                 context: false,
                 permanent: true,
+                unique: true,
             },
         "Add": {
                 name: "Add",
@@ -101,7 +102,7 @@ function NodeFlowEditor(boardElement, boardWrapperElement) {
     this.setupMenu();
     this.zoomDrag = new ZoomDrag(this.boardWrapperElement, "article.node");
     this.setupSelection();
-    this.addNode({type: "Output"}, 600, 600);
+    this.addNode({typeName: "Output"}, 600, 600);
 }
 
 
@@ -224,7 +225,7 @@ NodeFlowEditor.prototype = {
 
         const nodeObj = new NodeFlowEditorNode(
             this.boardElement, this.boardWrapperElement,
-            this.nodeTypes[node.type],
+            this.nodeTypes[node.typeName],
             {
                 ...node,
                 inputEdgeIds: [],
@@ -583,14 +584,14 @@ NodeFlowEditor.prototype = {
         this.grabbingNode = false;
     },
 
-    handleOnClickAdd(event, type) {
+    handleOnClickAdd(event, typeName) {
         // Positions taking into account scale and scroll
         const offsetLeft = this.boardElement.getBoundingClientRect().left;
         const offsetTop = this.boardElement.getBoundingClientRect().top;
         const x = (event.x - offsetLeft) / this.zoomDrag.scale;
         const y = (event.y -offsetTop) / this.zoomDrag.scale;
 
-        this.addNode({type: type}, x, y);
+        this.addNode({typeName: typeName}, x, y);
     },
 
     handleOnClickDeleteId(id, event) {
@@ -759,6 +760,9 @@ NodeFlowEditor.prototype = {
 
     deleteNode(node) {
         // Delete node from global nodes array
+        if (node.type.hasOwnProperty("permanent") && node.type.permanent) {
+            return;
+        }
         this.nodes = [...this.nodes.filter((n) => n !== node)];
         this.selectedNodes.delete(node);
 
@@ -844,7 +848,7 @@ NodeFlowEditor.prototype = {
 
         // remove output node
         // we do not need to remove the edges, as they will only be added if the nodes exist
-        nodes = nodes.filter((node) => node.type.name !== "Output");
+        nodes = nodes.filter((node) => node.type.unique !== true);
 
         return {nodes, edges};
     },
@@ -940,13 +944,13 @@ NodeFlowEditor.prototype = {
     }
 }
 
-function NodeFlowEditorNode(boardElement, boardWrapper, nodeType, props, zIndex=0) {
+function NodeFlowEditorNode(boardElement, boardWrapper, type, props, zIndex=0) {
     this.boardElement = boardElement;
     this.boardWrapper = boardWrapper;
     this.node = null;
 
     this.id = "";
-    this.nodeType = nodeType;
+    this.type = type;
     this.prevPosition = { x: 0, y: 0 };
     this.currPosition = { x: 0, y: 0 };
     this.numberInputs = 0;
@@ -966,7 +970,7 @@ function NodeFlowEditorNode(boardElement, boardWrapper, nodeType, props, zIndex=
 
 NodeFlowEditorNode.prototype = {
     setup() {
-        const tpl = this.boardWrapper.getElementsByClassName(this.nodeType.template)[0];
+        const tpl = this.boardWrapper.getElementsByClassName(this.type.template)[0];
         const node = tpl.content.cloneNode(true);
 
         this.node = node.firstElementChild;
@@ -993,7 +997,7 @@ NodeFlowEditorNode.prototype = {
 
         // Delete button
         const deleteButton = node.querySelector(".delete");
-        if (this.nodeType.hasOwnProperty("permanent") && this.nodeType.permanent) {
+        if (this.type.hasOwnProperty("permanent") && this.type.permanent) {
             deleteButton.style.display = "none";
         } else {
             deleteButton.addEventListener("click", (e) => this.onClickDelete(e));
