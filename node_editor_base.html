@@ -159,10 +159,10 @@
 
     <script type="text/javascript">
         let n = new NodeFlowEditor(document.getElementById("board"), document.getElementById("boardWrapper"));
-        n.addNode({typeName: "Math"}, 100,200);
-        n.addNode({typeName: "Add"}, 350,100);
-        n.addNode({typeName: "Number"}, 600,100);
-        n.addNode({typeName: "Average"}, 350,400);
+        n.addNode({typeName: "Math"}, {x: 100, y: 200});
+        n.addNode({typeName: "Add"}, {x: 350, y: 100});
+        n.addNode({typeName: "Number"}, {x: 600, y: 100});
+        n.addNode({typeName: "Average"}, {x: 350, y: 400});
 
         document.addEventListener('keydown', function(event) {
             if(event.shiftKey && event.key == 'E') {

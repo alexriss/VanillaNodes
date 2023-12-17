@@ -35,7 +35,7 @@ function NodeFlowEditor(boardElement, boardWrapperElement) {
     this.setupMenu();
     this.zoomDrag = new ZoomDrag(this.boardWrapperElement, "article.node");
     this.setupSelection();
-    this.addNode({typeName: "Output"}, 600, 600);
+    this.addNode({typeName: "Output"}, {x: 600, y: 600});
 }
 
 
@@ -189,25 +189,27 @@ NodeFlowEditor.prototype = {
         }
     },
 
-    IsNodeAtPosition(x, y, minDist=10) {
+    IsNodeAtPosition(pos, minDist=10) {
         // returns true if there is a node at the position
         for (let i = 0; i < this.nodes.length; i++) {
-            if (Math.abs(x - this.nodes[i].currPosition.x) < minDist &&
-                Math.abs(y - this.nodes[i].currPosition.y) < minDist) {
+            if (Math.abs(pos.x - this.nodes[i].currPosition.x) < minDist &&
+                Math.abs(pos.y - this.nodes[i].currPosition.y) < minDist) {
                     return true;
                 }
         }
         return false;
     },
 
-    addNode(node, offsetX=0, offsetY=0, onTop=true) {
+    addNode(node, offset, onTop=true) {
         if (!node.hasOwnProperty("currPosition")) {
-            node.currPosition = { x: 20, y: 20 };
+            node.currPosition = { x: 0, y: 0 };
+        } else if (typeof node.currPosition.x !== "number" || typeof node.currPosition.y !== "number") {
+            node.currPosition = { x: 0, y: 0 };
         }
-        node.currPosition.x += offsetX;
-        node.currPosition.y += offsetY;
+        node.currPosition.x += offset.x;
+        node.currPosition.y += offset.y;
 
-        while (this.IsNodeAtPosition(node.currPosition.x, node.currPosition.y)) {
+        while (this.IsNodeAtPosition(node.currPosition)) {
             node.currPosition.x += 20;
             node.currPosition.y += 20;
         }
@@ -583,7 +585,7 @@ NodeFlowEditor.prototype = {
         const x = (event.x - offsetLeft) / this.zoomDrag.scale;
         const y = (event.y -offsetTop) / this.zoomDrag.scale;
 
-        this.addNode({typeName: typeName}, x, y);
+        this.addNode({typeName: typeName}, {x: x, y: y});
     },
 
     handleOnClickDeleteId(id, event) {
@@ -750,9 +752,9 @@ NodeFlowEditor.prototype = {
         }
     },
 
-    deleteNode(node) {
+    deleteNode(node, force=false) {
         // Delete node from global nodes array
-        if (node.type.hasOwnProperty("permanent") && node.type.permanent) {
+        if (!force && node.type.hasOwnProperty("permanent") && node.type.permanent) {
             return;
         }
         this.nodes = [...this.nodes.filter((n) => n !== node)];
@@ -845,6 +847,20 @@ NodeFlowEditor.prototype = {
         return {nodes, edges};
     },
 
+    getModesOffsetCenter(nodes) {
+        // calculate the span of the nodes
+        const {minX, minY, maxX, maxY} = this.getNodesSpan(nodes);
+
+        const boardWidth = this.boardElement.getBoundingClientRect().width / this.zoomDrag.scale;
+        const boardHeight = this.boardElement.getBoundingClientRect().height / this.zoomDrag.scale;
+        const nodesWidth = maxX - minX;
+        const nodesHeight = maxY - minY;
+
+        const offsetX = (boardWidth - nodesWidth) / 2 - minX;
+        const offsetY = (boardHeight - nodesHeight) / 2 - minY;
+        return {x: offsetX, y: offsetY};
+    },
+
     loadData(data, clear=true, centerNodes=true, adjustView=true, select=false) {
         if (data == null && typeof val !== 'object' && !hasOwnProperty(data, "nodes") && !hasOwnProperty(data, "edges")) {
             return;
@@ -853,33 +869,23 @@ NodeFlowEditor.prototype = {
         // clear board
         if (clear) {
             while (this.nodes.length > 0) {
-                this.deleteNode(this.nodes[0]);
+                this.deleteNode(this.nodes[0], true);
             }
             while (this.edges.length > 0) {
                 this.deleteEdge(this.edges[0]);
             }
         }
 
-        let offsetX = 0;
-        let offsetY = 0;
+        let offset = {x: 0, y: 0};
         if (centerNodes) {
-            // calculate the span of the nodes
-            const {minX, minY, maxX, maxY} = this.getNodesSpan(data.nodes);
-
-            const boardWidth = this.boardElement.getBoundingClientRect().width / this.zoomDrag.scale;
-            const boardHeight = this.boardElement.getBoundingClientRect().height / this.zoomDrag.scale;
-            const nodesWidth = maxX - minX;
-            const nodesHeight = maxY - minY;
-
-            offsetX = (boardWidth - nodesWidth) / 2 - minX;
-            offsetY = (boardHeight - nodesHeight) / 2 - minY;
+            offset = this.getModesOffsetCenter(data.nodes);
         }
-
+  
         // load from exported data
         let nodeIds = [];
         if (data.hasOwnProperty("nodes")) {
             nodeIds = data.nodes.map((node) => {
-                this.addNode(node, offsetX, offsetY);
+                this.addNode(node, offset);
                 return node.id;
             });
         }
