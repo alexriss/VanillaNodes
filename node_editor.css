@@ -51,12 +51,45 @@ body {
     z-index: 1;
     transition: border ease 0.2s, box-shadow ease 0.2s;
     width: 120px;
-    min-height: 100px;
+    min-height: 75px;
     font-size: small;
+}
+
+.boardWrapper .node .message-body {
+    padding: 1.0em 1.2em
 }
 
 .boardWrapper .message-header {
     padding: .3em 0.5em;
+}
+
+.boardWrapper .node.node-input {
+    background-color: #f0ebec;
+    width: 180px;
+}
+
+.boardWrapper .node.node-input .message-header {
+    background-color: #a00f31dc;
+}
+
+.boardWrapper .node.node-input {
+    background-color: #f5e8eb;
+}
+
+.boardWrapper .node.node-output .message-header {
+    background-color: #0d8476e5;
+}
+
+.boardWrapper .node.node-output {
+    background-color: #cdf3ef;
+}
+
+.boardWrapper .node.node-color .message-header {
+    background-color: #a0a0a0;
+}
+
+.boardWrapper .node.node-color {
+    background-color: #f0f0f0;
 }
 
 .boardWrapper .node:hover {
@@ -74,21 +107,21 @@ body {
 
 .boardWrapper .inputsWrapper {
     position: absolute;
-    top: 8px;
+    top: 11px;
     left: -7px;
     height: 100%;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 12px;
+    gap: 8px;
     width: 12px;
     pointer-events: none;
 }
 
 .boardWrapper .outputsWrapper {
     position: absolute;
-    top: 8px;
+    top: 11px;
     right: -7px;
     height: 100%;
     display: flex;
@@ -135,7 +168,16 @@ body {
     border: 1px solid #c4c4c4;
     height: auto;
     line-height: normal;
-    padding: 0.3em 0.3em;
+    padding: 0.3em 0.5em;
+    margin:0;
+}
+
+.boardWrapper .node input[type=color] {
+    font-size: small;
+    border: 1px solid #c4c4c4;
+    height: 25px;
+    line-height: normal;
+    padding: 0.1em 0.2em;
     margin:0;
 }
 

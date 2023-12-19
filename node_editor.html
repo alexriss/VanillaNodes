@@ -16,7 +16,7 @@
         <section id="board" class="board">
             <div class="dropdown is-active" id="dropdown-menu-node-wrapper">
                 <div>
-                <article class="message is-info dropdown-menu">
+                <article class="message has-background-dark	 dropdown-menu">
                     <div class="message-header has-text-info-light">
                       Add node
                     </div>
@@ -37,6 +37,30 @@
         </section>
 
         <div id="nodeTemplates">
+            <template id="nodeTemplateInput" data-name="Input">
+                <article class="node message node-input is-small">
+                    <div class="message-header is-small">
+                    Input
+                    <button class="delete is-small"></button>
+                    </div>
+                    <div class="message-body">
+                        <select name="filename" class="input mb-1">
+                            <option value="spectrum_name_007.dat">spectrum_name_007.dat</option>
+                            <option value="spectrum_name_007.dat">spectrum_name_007.dat</option>
+                        </select>
+                        <select name="channel" class="input mb-1">
+                            <option value="Current">Current</option>
+                            <option value="Frequency Shift">Frequency Shift</option>
+                        </select>
+                    </div>
+                    <div class="outputsWrapper">
+                        <div class="outputNode"></div>
+                    </div>
+                </article>
+            </template>
+
+            <template id="nodeTemplateInput" data-name="divider"></template>
+
             <template id="nodeTemplateAdd" data-name="Add">
                 <article class="node message is-info is-small">
                     <div class="message-header is-small">
@@ -47,7 +71,6 @@
                     
                     </div>
                     <div class="inputsWrapper">
-                        <div class="inputNode"></div>
                         <div class="inputNode"></div>
                     </div>
                     <div class="outputsWrapper">
@@ -108,7 +131,25 @@
                         <input name="val" class="input node-math-value" type="number" step="0.1" value="0">
                     </div>
                     <div class="inputsWrapper">
-                        <div class="inputNode"></div>
+                    </div>
+                    <div class="outputsWrapper">
+                        <div class="outputNode"></div>
+                    </div>
+                </article>
+            </template>
+
+            <template id="nodeTemplateInput" data-name="divider"></template>
+
+            <template id="nodeTemplateColor" data-name="Color">
+                <article class="node message node-color is-info is-small">
+                    <div class="message-header is-small">
+                    Color
+                    <button class="delete is-small"></button>
+                    </div>
+                    <div class="message-body">
+                        <input name="color" class="input" type="color" value="#000000">
+                    </div>
+                    <div class="inputsWrapper">
                         <div class="inputNode"></div>
                     </div>
                     <div class="outputsWrapper">
@@ -118,7 +159,7 @@
             </template>
 
             <template id="nodeTemplateOutput" data-name="Output" data-context="false" data-permanent="true", data-unique="true">
-                <article class="node message is-primary is-small  has-background-success-light">
+                <article class="node message node-output is-small">
                     <div class="message-header is-small">
                     Output
                     <button class="delete is-small"></button>
@@ -159,10 +200,13 @@
 
     <script type="text/javascript">
         let n = new NodeFlowEditor(document.getElementById("board"), document.getElementById("boardWrapper"));
-        n.addNode({typeName: "Math"}, {x: 100, y: 200});
-        n.addNode({typeName: "Add"}, {x: 350, y: 100});
-        n.addNode({typeName: "Number"}, {x: 600, y: 100});
-        n.addNode({typeName: "Average"}, {x: 350, y: 400});
+        n.addNode({typeName: "Math"}, {x: 1100, y: 1200});
+        n.addNode({typeName: "Add"}, {x: 1350, y: 1100});
+        n.addNode({typeName: "Number"}, {x: 1600, y: 1100});
+        n.addNode({typeName: "Average"}, {x: 1350, y: 1400});
+        n.addNode({typeName: "Input"}, {x: 850, y: 1200});
+        n.addNode({typeName: "Input"}, {x: 850, y: 1400});
+
 
         document.addEventListener('keydown', function(event) {
             if(event.shiftKey && event.key == 'E') {

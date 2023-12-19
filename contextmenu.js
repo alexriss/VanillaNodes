@@ -36,6 +36,11 @@ ContextMenu.prototype = {
                     item.onclick(e);
                 });
             }
+            if (item.hasOwnProperty('class')) {
+                for (let j = 0; j < item.class.length; j++) {
+                    elA.classList.add(item.class[j]);
+                }
+            }
             dropdownContent.appendChild(el);
         }
 

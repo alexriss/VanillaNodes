@@ -35,7 +35,7 @@ function NodeFlowEditor(boardElement, boardWrapperElement) {
     this.setupMenu();
     this.zoomDrag = new ZoomDrag(this.boardWrapperElement, "article.node");
     this.setupSelection();
-    this.addNode({typeName: "Output"}, {x: 600, y: 600});
+    this.addNode({typeName: "Output"}, {x: 1600, y: 1600});
 }
 
 
@@ -45,6 +45,10 @@ NodeFlowEditor.prototype = {
         const templates = document.querySelectorAll("#nodeTemplates template");
         for (let i = 0; i < templates.length; i++) {
             const name = templates[i].getAttribute("data-name");
+            if (name === "divider") {
+                this.nodeTypes["divider" + i] = "divider";
+                continue;
+            }
             const context = !(templates[i].getAttribute("data-context") === "false");
             const permanent = (templates[i].getAttribute("data-permanent") === "true");
             const unique = (templates[i].getAttribute("data-unique") === "true");
@@ -63,15 +67,21 @@ NodeFlowEditor.prototype = {
         const structure = [];
         // iterate over nodetypes object key/value pairs
         for (let [key, value] of Object.entries(this.nodeTypes)) {
+            if (value === "divider") {
+                structure.push('divider');
+                continue;
+            }
             const obj = {
                 'onclick': (e) => this.handleOnClickAdd(e, key),
             }
-            Object.assign(obj, this.nodeTypes[key]);
+            Object.assign(obj, value);
             structure.push(obj);
         }
         structure.push('divider');      
         structure.push({
-            'name': 'Extra text',
+            'name': 'Fit to view',
+            'onclick': () => this.zoomDrag.adjustView(),
+            'class': ['has-text-grey', 'is-italic']
         });
 
         const menuWrapper = document.getElementById('dropdown-menu-node-wrapper');
@@ -234,6 +244,7 @@ NodeFlowEditor.prototype = {
                 onMouseDownNode: (event) => this.handleOnMouseDownNode(node.id, event),
                 onMouseUpNode: (event) => this.handleOnMouseUpNode(node.id, event),
                 onClickDelete: (event) => this.handleOnClickDeleteId(node.id, event),
+                onDoubleClick: (event) => this.handleOnDoubleClickNode(event),
                 onMouseDownOutput: (x, y, id, indO, indI) => this.handleOnMouseDownOutput(x, y, node.id, indO, indI),
                 onMouseEnterInput: (x, y, id, indO, indI) => this.handleOnMouseEnterInput(x, y, node.id, indO, indI),
                 onMouseLeaveInput: (id, indO, indI) => this.handleOnMouseLeaveInput(node.id, indO, indI),
@@ -504,6 +515,11 @@ NodeFlowEditor.prototype = {
                 y: (event.y - offsetTop) / this.zoomDrag.scale,
             });
         }
+    },
+
+    handleOnDoubleClickNode(event) {
+        // Prevent click on board
+        event.stopPropagation();        
     },
 
     handleOnMouseDownNode(id, event) {
@@ -975,6 +991,7 @@ NodeFlowEditorNode.prototype = {
         this.node.style.transform = `translate(${this.currPosition.x}px, ${this.currPosition.y}px)`;
         this.node.addEventListener("mousedown", (e) => this.onMouseDownNode(e));
         this.node.addEventListener("mouseup", (e) => this.onMouseUpNode(e));
+        this.node.addEventListener("dblclick", (e) => this.onDoubleClick(e));
         this.node.style.zIndex = this.zIndex;
 
         // Inputs
