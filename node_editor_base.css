@@ -23,8 +23,8 @@ body {
     padding: 0;
     width: 200%;
     height: 200%;
-    min-width:3000px;
-    min-height:3000px;
+    min-width:6000px;
+    min-height:6000px;
     background-size: 30px 30px;
     background-image: radial-gradient(circle, #b8b8b8bf 1px, rgba(0, 0, 0, 0) 1px);
     background-color: antiquewhite;
