@@ -2,12 +2,17 @@
 // inspired by:
 // https://www.youtube.com/watch?v=1JNbGf8dhAQ
 
-function NodeFlowEditor(boardElement, boardWrapperElement) {
+function NodeFlowEditor(boardElement, boardWrapperElement, onChange=null) {
     this.boardElement = boardElement;
     this.boardWrapperElement = boardWrapperElement;
 
+    if (this.onChange === null) {
+        this.onChange = () => {};
+    }
+
     this.grabbingBoard = false;
     this,grabbingNode = false;
+    this.grabbingNodeMoved = false;
     this.selecting = false;
     
     this.selectedNodes = new Set();
@@ -248,6 +253,7 @@ NodeFlowEditor.prototype = {
                 onMouseDownOutput: (x, y, id, indO, indI) => this.handleOnMouseDownOutput(x, y, node.id, indO, indI),
                 onMouseEnterInput: (x, y, id, indO, indI) => this.handleOnMouseEnterInput(x, y, node.id, indO, indI),
                 onMouseLeaveInput: (id, indO, indI) => this.handleOnMouseLeaveInput(node.id, indO, indI),
+                onChange: (e) => this.handleOnChange(e),
             },
             zIndex
         )
@@ -402,6 +408,10 @@ NodeFlowEditor.prototype = {
     },
 
     // Handlers
+    handleOnChange() {
+        this.onChange();
+    },
+
     handleOnMouseDownBoard(event) {
         this.contextMenu.hideMenu();
 
@@ -454,6 +464,7 @@ NodeFlowEditor.prototype = {
 
             this.addEdge(edge);
             this.removeNewEdge();
+            this.handleOnChange();
         }
     },
 
@@ -469,6 +480,9 @@ NodeFlowEditor.prototype = {
                 this.grabbingNode = true;
                 const deltaX = event.x - this.clickedPosition.x;
                 const deltaY = event.y - this.clickedPosition.y;
+                if (deltaX !== 0 || deltaY !== 0) {
+                    this.grabbingNodeMoved = true;
+                }
 
                 for (const node of this.selectedNodes) {
                     // Update node position
@@ -590,8 +604,11 @@ NodeFlowEditor.prototype = {
             let switchState = (event.ctrlKey || event.shiftKey) ? true : false;
             switchState = this.clickedNodeInitialState ? switchState : false;
             this.setSelectedNodeId(id, unselect, switchState);
+        } else if (this.grabbingNode && this.grabbingNodeMoved) {
+            this.handleOnChange();
         }
         this.grabbingNode = false;
+        this.grabbingNodeMoved = false;
     },
 
     handleOnClickAdd(event, typeName) {
@@ -602,6 +619,7 @@ NodeFlowEditor.prototype = {
         const y = (event.y -offsetTop) / this.zoomDrag.scale;
 
         this.addNode({typeName: typeName}, {x: x, y: y});
+        this.handleOnChange();
     },
 
     handleOnClickDeleteId(id, event) {
@@ -643,6 +661,8 @@ NodeFlowEditor.prototype = {
 
         // Delete node
         this.deleteNode(node);
+
+        this.handleOnChange();
     },
 
     handleOnMouseDownOutput(outputPositionX, outputPositionY, nodeId, outputIndex, inputIndex) {
@@ -765,6 +785,8 @@ NodeFlowEditor.prototype = {
             // Delete edge from global edges array
             this.edges = [...this.edges.filter((e) => e.id !== edge.id)];
             this.deleteEdge(edge);
+
+            this.handleOnChange();
         }
     },
 
@@ -923,6 +945,7 @@ NodeFlowEditor.prototype = {
                 }
             }
         }
+        this.handleOnChange();
     },
 
     setupSelection() {
@@ -1018,15 +1041,18 @@ NodeFlowEditorNode.prototype = {
             deleteButton.addEventListener("click", (e) => this.onClickDelete(e));
         }
 
-        // parameters
-        if (this.hasOwnProperty("params")) {
-            const params = this.node.querySelectorAll("input, select");
-            for (let i = 0; i < params.length; i++) {
-                if (this.params.hasOwnProperty(params[i].name)) {
-                    params[i].value = this.params[params[i].name];
-                }
+        // parameters and events for inputs
+        if (!this.hasOwnProperty("params")) {
+            this.params = {};
+        }
+        const inputEls = this.node.querySelectorAll("input, select");
+        for (let i = 0; i < inputEls.length; i++) {
+            inputEls[i].addEventListener("change", (e) => this.onChange(e));
+            if (this.params.hasOwnProperty(inputEls[i].name)) {
+                inputEls[i].value = this.params[inputEls[i].name];
             }
         }
+
 
         // Add node to board
         this.boardElement.appendChild(node);
