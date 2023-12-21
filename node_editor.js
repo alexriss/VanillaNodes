@@ -1045,12 +1045,26 @@ NodeFlowEditorNode.prototype = {
         if (!this.hasOwnProperty("params")) {
             this.params = {};
         }
+        if (!this.hasOwnProperty("options")) {
+            this.options = {};
+        }
         const inputEls = this.node.querySelectorAll("input, select");
         for (let i = 0; i < inputEls.length; i++) {
-            inputEls[i].addEventListener("change", (e) => this.onChange(e));
-            if (this.params.hasOwnProperty(inputEls[i].name)) {
-                inputEls[i].value = this.params[inputEls[i].name];
+            const name = inputEls[i].name;
+            if (inputEls[i].tagName === "SELECT" && this.options.hasOwnProperty(name)) {
+                // set select options
+                for (let j = 0; j < this.options[name].length; j++) {
+                    const option = document.createElement("option");
+                    option.value = this.options[name][j];
+                    option.innerHTML = this.options[name][j];
+                    inputEls[i].appendChild(option);
+                }
             }
+            if (this.params.hasOwnProperty(name)) {
+                inputEls[i].value = this.params[name];
+            }
+
+            inputEls[i].addEventListener("change", (e) => this.onChange(e));
         }
 
 

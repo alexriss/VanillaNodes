@@ -45,12 +45,8 @@
                     </div>
                     <div class="message-body">
                         <select name="filename" class="input mb-1">
-                            <option value="spectrum_name_007.dat">spectrum_name_007.dat</option>
-                            <option value="spectrum_name_007.dat">spectrum_name_007.dat</option>
                         </select>
                         <select name="channel" class="input mb-1">
-                            <option value="Current">Current</option>
-                            <option value="Frequency Shift">Frequency Shift</option>
                         </select>
                     </div>
                     <div class="outputsWrapper">
@@ -204,8 +200,20 @@
         n.addNode({typeName: "Add"}, {x: 1350, y: 1100});
         n.addNode({typeName: "Number"}, {x: 1600, y: 1100});
         n.addNode({typeName: "Average"}, {x: 1350, y: 1400});
-        n.addNode({typeName: "Input"}, {x: 850, y: 1200});
-        n.addNode({typeName: "Input"}, {x: 850, y: 1400});
+        n.addNode({typeName: "Input",
+            options: {
+                filename: ["spectrum_name_007.dat", "spectrum_name_008.dat", "spectrum_name_009.dat"],
+                channel: ["Current", "Frequency Shift", "Amplitude"]
+            }},
+            {x: 850, y: 1200}
+        );
+        n.addNode({typeName: "Input",
+            options: {
+                filename: ["spectrum_name_007.dat", "spectrum_name_008.dat", "spectrum_name_009.dat"],
+                channel: ["Current", "Frequency Shift", "Amplitude"]
+            }},
+            {x: 850, y: 1400}
+        );
 
         n.onChange = function() {
             console.log("change" + Math.random());
